@@ -1,0 +1,50 @@
+export const locales = {
+  zh: {
+    title: "以太画报",
+    subtitle: "全知交互中枢",
+    status: "系统就绪",
+    connected: "系统已连接",
+    offline: "系统离线",
+    listening: "正在倾听...",
+    voice_on: "语音开启",
+    voice_off: "语音关闭",
+    research_intent: "请输入调研意图或指令...",
+    recording: "正在录制语音...",
+    asymmetric_auditing: "非对称审计结晶",
+    pixel_map: "像素级证据映射",
+    model_mgmt: "模型管理中心",
+    save: "保存配置",
+    cancel: "取消",
+    persist: "持久化",
+    clear: "清空画布",
+    memory: "记忆调取",
+    video: "视频模式",
+    palette: "视觉指纹",
+    complete: "任务完成"
+  },
+  en: {
+    title: "AETHER CANVAS",
+    subtitle: "Omniscient Interaction Hub",
+    status: "SYSTEM READY",
+    connected: "SYSTEM CONNECTED",
+    offline: "SYSTEM OFFLINE",
+    listening: "LISTENING...",
+    voice_on: "VOICE ON",
+    voice_off: "VOICE OFF",
+    research_intent: "INPUT RESEARCH INTENT...",
+    recording: "RECORDING SPEECH...",
+    asymmetric_auditing: "Asymmetric_Auditing",
+    pixel_map: "PIXEL_LEVEL_EVIDENCE_MAP",
+    model_mgmt: "MODEL_MANAGEMENT",
+    save: "SAVE",
+    cancel: "CANCEL",
+    persist: "PERSIST",
+    clear: "CLEAR CANVAS",
+    memory: "MEMORY RETRIEVAL",
+    video: "VIDEO MODE",
+    palette: "VISUAL FINGERPRINT",
+    complete: "COMPLETE"
+  }
+};
+
+export type LocaleType = keyof typeof locales;
