@@ -48,34 +48,32 @@ const IntentEngine: React.FC<IntentEngineProps> = ({ stage, accentColor }) => {
 
     const animate = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
+      const centerX = canvas.width / 2;
+      const centerY = canvas.height / 2;
 
-      if (stage === 'exploration') {
-        particles.current.forEach(p => {
-          p.x += p.vx * 4;
-          p.y += p.vy * 4;
-          if (p.x < 0 || p.x > canvas.width) p.vx *= -1;
-          if (p.y < 0 || p.y > canvas.height) p.vy *= -1;
-
-          ctx.beginPath();
-          ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-          ctx.fillStyle = `rgba(${accentColor}, ${p.alpha})`;
-          ctx.fill();
-        });
-      }
-
-      if (stage === 'convergence') {
-        const centerX = canvas.width / 2;
-        const centerY = canvas.height / 2;
-        particles.current.forEach(p => {
+      particles.current.forEach(p => {
+        // Generative Layout Resonance: Coalesce at center or drift based on stage
+        if (stage === 'convergence') {
           p.x += (centerX - p.x) * 0.05;
           p.y += (centerY - p.y) * 0.05;
-          
-          ctx.beginPath();
-          ctx.arc(p.x, p.y, p.size * 0.5, 0, Math.PI * 2);
-          ctx.fillStyle = `rgba(${accentColor}, ${p.alpha * 0.5})`;
-          ctx.fill();
-        });
+        } else if (stage === 'exploration') {
+          p.x += p.vx * 4;
+          p.y += p.vy * 4;
+        } else {
+          p.x += p.vx * 0.5;
+          p.y += p.vy * 0.5;
+        }
 
+        if (p.x < 0 || p.x > canvas.width) p.vx *= -1;
+        if (p.y < 0 || p.y > canvas.height) p.vy *= -1;
+
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(${accentColor}, ${p.alpha})`;
+        ctx.fill();
+      });
+
+      if (stage === 'convergence') {
         bubbles.current.forEach(b => {
           b.r += (b.targetR - b.r) * 0.02;
           b.alpha += (0.1 - b.alpha) * 0.02;
@@ -84,17 +82,6 @@ const IntentEngine: React.FC<IntentEngineProps> = ({ stage, accentColor }) => {
           ctx.strokeStyle = `rgba(${accentColor}, ${b.alpha})`;
           ctx.lineWidth = 1;
           ctx.stroke();
-        });
-      }
-
-      if (stage === 'crystallization') {
-        // Particles fade and stop
-        particles.current.forEach(p => {
-          p.alpha *= 0.95;
-          ctx.beginPath();
-          ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-          ctx.fillStyle = `rgba(${accentColor}, ${p.alpha})`;
-          ctx.fill();
         });
       }
 

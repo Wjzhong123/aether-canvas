@@ -51,17 +51,33 @@ class Orchestrator:
 
     def _get_completion_args(self, model: str) -> Dict[str, Any]:
         args = {"model": model, "temperature": self.temperature}
-        prefix_map = {
-            "gpt": "OPENAI_API_KEY",
-            "deepseek": "DEEPSEEK_API_KEY",
-            "nvidia": "NVIDIA_API_KEY",
-            "claude": "ANTHROPIC_API_KEY",
-            "zhipu": "ZHIPUAI_API_KEY"
-        }
-        for prefix, env_key in prefix_map.items():
-            if prefix in model.lower() and env_key in self.provider_configs:
-                args["api_base"] = self.provider_configs[env_key]
+        
+        target_base = None
+        target_key = None
+        
+        # 1. Match specific provider by name
+        for env_key, base_url in self.provider_configs.items():
+            provider_name = env_key.lower().replace("_api_key", "").replace("_key", "")
+            if provider_name in model.lower():
+                target_base = base_url
+                target_key = os.environ.get(env_key)
                 break
+        
+        # 2. Heuristic for custom models
+        if not target_base and self.provider_configs and "/" in model:
+            env_key = list(self.provider_configs.keys())[0]
+            target_base = self.provider_configs[env_key]
+            target_key = os.environ.get(env_key)
+
+        if target_base:
+            args["api_base"] = target_base
+            if target_key: args["api_key"] = target_key
+            
+            known_providers = ["gpt", "claude", "deepseek", "gemini", "anthropic", "zhipu", "bedrock", "ollama"]
+            if not any(model.lower().startswith(p) for p in known_providers):
+                if not model.startswith("openai/"):
+                    args["model"] = f"openai/{model}"
+        
         return args
 
     async def parse_command(self, raw_query: str) -> Dict[str, Any]:
@@ -166,18 +182,31 @@ class Orchestrator:
 
     async def audit_and_summarize(self, query: str, evidences: List[Dict], api_keys: Dict[str, Any], user_id: str = "default_user") -> Dict:
         self._setup_keys(api_keys)
-        context = "\n".join([f"Source: {e['url']}\nContent: {e.get('text', '')[:1000]}" for e in evidences])
+        # Deep context: Include visual metadata for pixel-level alignment
+        context_parts = []
+        for e in evidences:
+            elements_hint = "\n".join([f"Element: {el['text']} [Rect: {json.dumps(el['rect'])}]" for el in e.get('elements', [])[:10]])
+            context_parts.append(f"Source: {e['url']}\nTitle: {e['title']}\nRelevant Elements:\n{elements_hint}\nContent: {e.get('text', '')[:800]}")
+        
+        context = "\n---\n".join(context_parts)
+        
         try:
             args = self._get_completion_args(self.premium_model)
             response = await litellm.acompletion(
                 **args,
                 messages=[
-                    {"role": "system", "content": f"You are {self.identity['name']}. Asymmetric Auditing Agent. Provide a summary with citations in JSON format. Ensure the summary is in the same language as the user's query."},
-                    {"role": "user", "content": f"Query: {query}\nEvidence: {context}"}
+                    {"role": "system", "content": f"You are {self.identity['name']}, the {self.identity['role']}. ASYMMETRIC AUDITING ENGINE. \n1. Summarize findings in the user's language.\n2. For EACH claim, provide a citation with 'url' and the EXACT 'point' (text segment) found in that source.\n3. Assign an 'importance_score' (0.0 to 1.0) to each source based on its relevance.\nReturn ONLY valid JSON: {{'summary': '...', 'citations': [{{'url': '...', 'point': '...'}}], 'source_weights': {{'url': 0.8}}}}"},
+                    {"role": "user", "content": f"Analyze: {query}\n\nEvidence Evidence:\n{context}"}
                 ],
                 response_format={"type": "json_object"}
             )
             result = json.loads(response.choices[0].message.content)
+            
+            # Enrich evidences with weights
+            weights = result.get('source_weights', {})
+            for e in evidences:
+                e['importance'] = weights.get(e['url'], 0.5)
+
             self.memory.add(f"Audit: {result.get('summary', '')[:200]}", user_id=user_id)
             return result
         except Exception as e:

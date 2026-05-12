@@ -42,6 +42,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, currentL
   const [newModelName, setNewModelName] = useState('');
   const [newModelId, setNewModelId] = useState('');
   const [isAddingModel, setIsAddingModel] = useState(false);
+  const [isAddingProvider, setIsAddingProvider] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'success'>('idle');
   
   const t = locales[currentLang];
@@ -178,12 +179,30 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, currentL
             <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
               <div className="flex items-center justify-between">
                 <p className="text-[10px] text-white/40 uppercase font-bold tracking-tighter">{t.auth_matrix}</p>
-                <button onClick={() => {
-                  const name = prompt(t.provider_prompt);
-                  if (name) setKeys({...keys, [name.trim().toUpperCase()]: { key: '', baseUrl: '' }});
-                }} className="text-[10px] font-bold text-accent hover:underline flex items-center gap-1">
-                  <Plus className="w-3 h-3" /> {t.add_provider}
-                </button>
+                {!isAddingProvider ? (
+                  <button onClick={() => setIsAddingProvider(true)} className="text-[10px] font-bold text-accent hover:underline flex items-center gap-1">
+                    <Plus className="w-3 h-3" /> {t.add_provider}
+                  </button>
+                ) : (
+                  <div className="flex items-center gap-2 animate-in fade-in slide-in-from-right-2">
+                    <input 
+                      autoFocus
+                      type="text"
+                      placeholder="PROVIDER_NAME"
+                      className="bg-black/40 border border-accent/20 rounded px-2 py-1 text-[9px] font-mono text-accent outline-none focus:border-accent"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          const name = e.currentTarget.value.trim().toUpperCase();
+                          if (name) {
+                            setKeys({...keys, [name]: { key: '', baseUrl: '' }});
+                            setIsAddingProvider(false);
+                          }
+                        } else if (e.key === 'Escape') setIsAddingProvider(false);
+                      }}
+                      onBlur={() => setIsAddingProvider(false)}
+                    />
+                  </div>
+                )}
               </div>
 
               <div className="space-y-4">

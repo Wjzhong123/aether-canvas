@@ -13,6 +13,17 @@ AetherCanvas 是一款 AI 原生的“全知交互中枢”。它打破了传统
 - **Superpowers Bar**：支持原子化指令（如 `/v` 视频模式、`/p` 视觉模式、`/m` 记忆模式）。
 - **流式语音交互**：集成 Web Speech API，支持大屏幕实时流式字幕与语音录入。
 
+## ⚙️ Under the Hood
+
+### 1. Nexus-Visual-Link (像素级证据追踪)
+利用 Playwright 捕获网页 DOM 坐标并与截图进行像素级对齐。Auditor 代理能够直接在画报上“框选”出原始信源的具体位置，实现不可篡改的真实现场还原。
+
+### 2. Aether-Sync (全双工编排引擎)
+基于 WebSocket 的双向流式通信，实现了“意图流”与“结果流”的并行分发。即使在处理复杂的全球信源调研时，也能保证毫秒级的感知响应。
+
+### 3. Swiss-Gen-UI (自进化生成式布局)
+基于 AI 计算出的 `importance_score` 动态驱动卡片权重。画报布局并非静态 Grid，而是根据数据重要度、用户偏好特征（Mem0）实时生成的非对称美学构图。
+
 ## 🛠 技术栈
 
 - **Frontend**: Next.js 16 (App Router), Three.js (粒子云), Tailwind CSS, GSAP (动态连线), Framer Motion.
