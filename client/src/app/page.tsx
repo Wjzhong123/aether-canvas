@@ -221,7 +221,7 @@ export default function Home() {
       {/* Swiss Grid Overlay */}
       <div className="fixed inset-0 pointer-events-none z-10 opacity-[0.03] bg-[radial-gradient(#fff_1px,transparent_1px)] [background-size:20px_20px]" />
       
-      <IntentEngine stage={thinkingStage} accentColor={accentColor} />
+      <IntentEngine stage={thinkingStage} accentColor={accentColor} isListening={isListening} findingCount={evidenceList.length} />
       <VisualPulse active={isSearching} />
       <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} currentLang={lang} setLang={setLang} />
       
@@ -308,6 +308,7 @@ export default function Home() {
             <motion.div 
               key={idx} 
               layout
+              transition={{ type: 'spring', stiffness: 200, damping: 25 }}
               ref={el => { cardRefs.current[evidence.url] = el; }} 
               className={`relative ${
                 evidence.importance > 0.8 ? 'md:col-span-2 md:row-span-3' : 
@@ -408,7 +409,7 @@ export default function Home() {
       </div>
 
       <svg ref={svgRef} className="fixed inset-0 pointer-events-none z-40 w-full h-full">
-        <path ref={pathRef} fill="none" stroke="rgba(var(--accent-rgb), 0.6)" strokeWidth="2" strokeDasharray="8,8" className="sci-fi-glow" />
+        <path ref={pathRef} fill="none" stroke="rgba(var(--accent-rgb), 0.6)" strokeWidth="2" strokeDasharray="8,8" className="sci-fi-glow animate-dash-pulse" />
       </svg>
 
       {isListening && (

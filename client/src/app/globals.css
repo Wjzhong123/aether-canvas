@@ -97,6 +97,15 @@
   color: rgba(255, 255, 255, 0.8) !important;
   text-transform: uppercase;
 }
+@keyframes dash-pulse {
+  to {
+    stroke-dashoffset: -40;
+  }
+}
+
+.animate-dash-pulse {
+  animation: dash-pulse 2s linear infinite;
+}
 
 .content-mono {
   font-family: monospace;
