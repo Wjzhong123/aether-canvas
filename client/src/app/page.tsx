@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import VisualPulse from '@/components/VisualPulse';
 import EvidenceCard from '@/components/EvidenceCard';
-import { Command, ShieldCheck, Target, Mic, MicOff, Volume2, Zap } from 'lucide-react';
+import { Command, ShieldCheck, Target, Mic, MicOff, Zap } from 'lucide-react';
 import gsap from 'gsap';
 
 declare global {
@@ -106,54 +106,55 @@ export default function Home() {
   return (
     <main className="min-h-screen relative swiss-grid selection:bg-accent selection:text-black overflow-x-hidden">
       <VisualPulse active={isSearching} />
+      
+      {/* Voice Subtitles Overlay */}
       {isListening && (
-        <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[100] w-full max-w-4xl px-8 pointer-events-none">
-          <p className="text-bauhaus text-6xl text-center tracking-tighter text-white opacity-90 italic">{transcript || "LISTENING..."}</p>
+        <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[100] w-full max-w-4xl px-4 md:px-8 pointer-events-none">
+          <p className="text-bauhaus text-4xl md:text-6xl text-center tracking-tighter text-white opacity-90 italic drop-shadow-2xl">
+            {transcript || "LISTENING..."}
+          </p>
         </div>
       )}
+
       <svg ref={svgRef} className="fixed inset-0 pointer-events-none z-40 w-full h-full">
         <path ref={pathRef} fill="none" stroke="var(--color-accent)" strokeWidth="1.5" strokeDasharray="5,5" className="drop-shadow-[0_0_8px_rgba(255,62,0,0.8)]" />
       </svg>
 
-      <header className="fixed top-0 left-0 w-full p-8 z-50 flex justify-between items-start pointer-events-none">
+      <header className="fixed top-0 left-0 w-full p-4 md:p-8 z-50 flex justify-between items-start pointer-events-none">
         <div className="pointer-events-auto">
-          <h1 className="text-bauhaus text-5xl leading-[0.8] mb-2">AETHER<br />CANVAS</h1>
-          <div className="h-1 w-12 bg-accent" />
+          <h1 className="text-bauhaus text-3xl md:text-5xl leading-[0.8] mb-2">AETHER<br />CANVAS</h1>
+          <div className="h-1 w-8 md:w-12 bg-accent" />
         </div>
-        <div className="text-right font-mono pointer-events-auto flex items-center gap-4">
-          <button onClick={toggleListening} className={`flex items-center gap-2 px-3 py-1 border text-[10px] ${isListening ? 'border-accent text-accent animate-pulse' : 'border-white/10 hover:border-white/40'}`}>
+        <div className="text-right font-mono pointer-events-auto flex flex-col items-end gap-2">
+          <button onClick={toggleListening} className={`flex items-center gap-2 px-3 py-1 border text-[9px] md:text-[10px] ${isListening ? 'border-accent text-accent animate-pulse' : 'border-white/10 hover:border-white/40'}`}>
             {isListening ? <Mic className="w-3 h-3" /> : <MicOff className="w-3 h-3" />} {isListening ? 'VOICE ON' : 'VOICE OFF'}
           </button>
-          <div className="text-xs text-white/50 tracking-widest">{status}</div>
+          <div className="text-[9px] md:text-xs text-white/50 tracking-widest uppercase">{status}</div>
         </div>
       </header>
 
-      <div className="pt-48 px-8 pb-48 max-w-[1800px] mx-auto relative z-10">
+      <div className="pt-32 md:pt-48 px-4 md:px-8 pb-32 md:pb-48 max-w-[1800px] mx-auto relative z-10">
         <div className="masonry-columns mb-12">
           {evidenceList.map((evidence, i) => (
             <div key={i} ref={el => { cardRefs.current[evidence.url] = el; }} className="masonry-item animate-in fade-in slide-in-from-bottom-12 duration-1000">
-              <EvidenceCard 
-                evidence={evidence} 
-                activeLocator={activeCitation?.url === evidence.url ? activeCitation?.locator_text : null} 
-                onFeedback={sendFeedback}
-              />
+              <EvidenceCard evidence={evidence} activeLocator={activeCitation?.url === evidence.url ? activeCitation?.locator_text : null} onFeedback={sendFeedback} />
             </div>
           ))}
         </div>
 
         {summaryData && (
-          <div className="max-w-4xl mx-auto glass border-l-8 border-accent p-12 mb-24 animate-in slide-in-from-left-12 duration-700 bg-surface/90">
+          <div className="max-w-4xl mx-auto glass border-l-4 md:border-l-8 border-accent p-6 md:p-12 mb-24 animate-in slide-in-from-left-12 duration-700 bg-surface/90">
             <div className="flex items-center gap-4 mb-8">
-              <ShieldCheck className="w-8 h-8 text-accent" />
-              <h2 className="text-bauhaus text-4xl tracking-tighter uppercase">Asymmetric_Auditing</h2>
+              <ShieldCheck className="w-6 h-6 md:w-8 md:h-8 text-accent" />
+              <h2 className="text-bauhaus text-2xl md:text-4xl tracking-tighter uppercase">Asymmetric_Auditing</h2>
             </div>
-            <div className="prose prose-invert max-w-none font-mono text-sm leading-relaxed text-white/80 mb-12">{summaryData.summary}</div>
+            <div className="prose prose-invert max-w-none font-mono text-xs md:text-sm leading-relaxed text-white/80 mb-12">{summaryData.summary}</div>
             <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-4">
                 {summaryData.citations?.map((cit: any, i: number) => (
-                  <button key={i} ref={el => { citationRefs.current[cit.point] = el; }} onClick={() => setActiveCitation(cit === activeCitation ? null : cit)} className={`text-left p-4 glass border-l-2 transition-all duration-300 ${activeCitation === cit ? 'border-accent bg-accent/10 translate-x-2' : 'border-white/10'}`}>
-                    <p className="font-mono text-[11px] text-white/90 mb-1">“{cit.point}”</p>
-                    <p className="font-mono text-[9px] text-white/30 truncate uppercase">{new URL(cit.url).hostname}</p>
+                  <button key={i} ref={el => { citationRefs.current[cit.point] = el; }} onClick={() => setActiveCitation(cit === activeCitation ? null : cit)} className={`text-left p-3 md:p-4 glass border-l-2 transition-all duration-300 ${activeCitation === cit ? 'border-accent bg-accent/10 translate-x-1 md:translate-x-2' : 'border-white/10'}`}>
+                    <p className="font-mono text-[10px] md:text-[11px] text-white/90 mb-1">“{cit.point}”</p>
+                    <p className="font-mono text-[8px] md:text-[9px] text-white/30 truncate uppercase">{new URL(cit.url).hostname}</p>
                   </button>
                 ))}
               </div>
@@ -162,19 +163,19 @@ export default function Home() {
         )}
       </div>
 
-      <footer className="fixed bottom-0 left-0 w-full p-12 z-50 pointer-events-none">
+      <footer className="fixed bottom-0 left-0 w-full p-4 md:p-12 z-50 pointer-events-none">
         <div className="max-w-3xl mx-auto pointer-events-auto">
           <div className="glass rounded-none border-l-4 border-accent p-1 flex items-center gap-2 shadow-2xl bg-black/95">
             <div className="pl-4"><Command className="w-5 h-5 text-accent" /></div>
             <input 
               type="text" 
-              placeholder="INPUT RESEARCH INTENT..."
-              className="flex-1 bg-transparent border-none outline-none font-mono text-sm py-5 px-2 tracking-[0.2em] uppercase"
+              placeholder="RESEARCH INTENT..."
+              className="flex-1 bg-transparent border-none outline-none font-mono text-[10px] md:text-sm py-4 md:py-5 px-2 tracking-[0.2em] uppercase"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
             />
-            <button onClick={handleSearch} className="bg-accent hover:bg-white text-black px-8 py-5 transition-all duration-500 font-bauhaus text-xl">EXEC</button>
+            <button onClick={handleSearch} className="bg-accent hover:bg-white text-black px-4 md:px-8 py-4 md:py-5 transition-all duration-500 font-bauhaus text-lg md:text-xl">EXEC</button>
           </div>
         </div>
       </footer>
