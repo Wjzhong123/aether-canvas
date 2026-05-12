@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { ExternalLink, Search, Play, Crosshair } from 'lucide-react';
+import { ExternalLink, Search, Play, Crosshair, Heart } from 'lucide-react';
 
 interface EvidenceElement {
   tag: string;
@@ -24,10 +24,12 @@ interface Evidence {
 interface EvidenceCardProps {
   evidence: Evidence;
   activeLocator?: string;
+  onFeedback?: (data: any) => void;
 }
 
-const EvidenceCard: React.FC<EvidenceCardProps> = ({ evidence, activeLocator }) => {
+const EvidenceCard: React.FC<EvidenceCardProps> = ({ evidence, activeLocator, onFeedback }) => {
   const [highlight, setHighlight] = useState<EvidenceElement | null>(null);
+  const [isLiked, setIsLiked] = useState(false);
 
   useEffect(() => {
     if (activeLocator && evidence.elements) {
@@ -40,6 +42,18 @@ const EvidenceCard: React.FC<EvidenceCardProps> = ({ evidence, activeLocator }) 
       setHighlight(null);
     }
   }, [activeLocator, evidence.elements]);
+
+  const handleLike = () => {
+    setIsLiked(!isLiked);
+    if (!isLiked && onFeedback) {
+      onFeedback({
+        url: evidence.url,
+        title: evidence.title,
+        type: "positive_interaction",
+        timestamp: new Date().toISOString()
+      });
+    }
+  };
 
   return (
     <div className={`glass group overflow-hidden border-white/10 hover:border-accent/50 transition-all duration-500 flex flex-col h-full bg-surface/50 ${highlight ? 'ring-2 ring-accent shadow-[0_0_30px_rgba(255,62,0,0.3)] scale-[1.02]' : ''}`}>
@@ -61,10 +75,9 @@ const EvidenceCard: React.FC<EvidenceCardProps> = ({ evidence, activeLocator }) 
           </div>
         )}
         
-        {/* Pixel-Level Alignment Highlight Overlay */}
         {highlight && (
           <div 
-            className="absolute border-2 border-accent bg-accent/10 pointer-events-none transition-all duration-500 shadow-[0_0_15px_rgba(255,62,0,0.5)] z-10"
+            className="absolute border-2 border-accent bg-accent/10 pointer-events-none z-10"
             style={{
               left: `${(highlight.rect.x / 1280) * 100}%`,
               top: `${(highlight.rect.y / 800) * 100}%`,
@@ -72,27 +85,16 @@ const EvidenceCard: React.FC<EvidenceCardProps> = ({ evidence, activeLocator }) 
               height: `${(highlight.rect.h / 800) * 100}%`,
             }}
           >
-             <div className="absolute -top-6 -left-0.5 bg-accent text-black font-mono text-[8px] px-1 py-0.5 flex items-center gap-1">
-                <Crosshair className="w-2 h-2" />
-                PIXEL_ALIGNED: {highlight.tag}
-             </div>
-          </div>
-        )}
-
-        {evidence.video_frames && evidence.video_frames.length > 0 && !highlight && (
-          <div className="absolute bottom-2 left-2 flex gap-1">
-             {evidence.video_frames.slice(0, 3).map((f, i) => (
-               <div key={i} className="w-8 h-8 border border-white/20 rounded overflow-hidden">
-                 <img src={`data:image/png;base64,${f}`} className="w-full h-full object-cover" />
-               </div>
-             ))}
-             <div className="w-8 h-8 glass flex items-center justify-center rounded">
-               <Play className="w-3 h-3 text-accent" fill="currentColor" />
+             <div className="absolute -top-6 -left-0.5 bg-accent text-black font-mono text-[8px] px-1 py-0.5 flex items-center gap-1 uppercase">
+                <Crosshair className="w-2 h-2" /> PIXEL_ALIGNED
              </div>
           </div>
         )}
 
         <div className="absolute top-2 right-2 flex gap-2">
+           <button onClick={handleLike} className={`p-2 glass rounded-full transition-all ${isLiked ? 'text-accent bg-accent/20' : 'text-white/40 hover:text-white'}`}>
+              <Heart className="w-4 h-4" fill={isLiked ? "currentColor" : "none"} />
+           </button>
            <a href={evidence.url} target="_blank" rel="noreferrer" className="p-2 glass rounded-full hover:bg-accent/20 transition-colors">
               <ExternalLink className="w-4 h-4" />
            </a>
