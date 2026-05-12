@@ -36,9 +36,11 @@ async def websocket_endpoint(websocket: WebSocket):
         while True:
             data = await websocket.receive_text()
             message = json.loads(data)
+            api_keys = message.get("api_keys", {}) # Received from frontend
             
             if message.get("type") == "research":
-                cmd_data = await orch.parse_command(message.get("query"))
+                raw_query = message.get("query")
+                cmd_data = await orch.parse_command(raw_query)
                 command = cmd_data["command"]
                 query = cmd_data["query"]
 
@@ -46,9 +48,15 @@ async def websocket_endpoint(websocket: WebSocket):
                     await websocket.send_json({"type": "clear"})
                     continue
 
-                await websocket.send_json({"type": "status", "content": f"MODE: {command.upper()}"})
-                tasks = await orch.decompose_intent(cmd_data)
+                await websocket.send_json({"type": "status", "content": f"CMD: {command.upper()} | PLANNING..."})
+                tasks = await orch.decompose_intent(cmd_data, api_keys)
                 
+                if command == "memory":
+                    for task in tasks:
+                        await websocket.send_json({"type": "status", "content": f"MEMORY: {task}"})
+                    await websocket.send_json({"type": "summary", "content": {"summary": "\n".join(tasks), "citations": []}})
+                    continue
+
                 collected_evidence = []
                 for task in tasks:
                     url = task if task.startswith("http") else f"https://www.bing.com/search?q={task}"
@@ -57,12 +65,13 @@ async def websocket_endpoint(websocket: WebSocket):
                     collected_evidence.append(evidence)
                     await websocket.send_json({"type": "evidence", "content": evidence})
                 
-                summary = await orch.audit_and_summarize(query, collected_evidence)
+                await websocket.send_json({"type": "status", "content": "AUDITING..."})
+                summary = await orch.audit_and_summarize(query, collected_evidence, api_keys)
                 await websocket.send_json({"type": "summary", "content": summary})
                 await websocket.send_json({"type": "status", "content": "COMPLETE."})
             
             elif message.get("type") == "feedback":
-                rule = await orch.learn_from_feedback(message.get("data"))
+                rule = await orch.learn_from_feedback(message.get("data"), api_keys)
                 await websocket.send_json({"type": "status", "content": f"EVOLVED: {rule}"})
                 
     except WebSocketDisconnect: pass

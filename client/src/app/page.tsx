@@ -3,7 +3,8 @@
 import React, { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import VisualPulse from '@/components/VisualPulse';
 import EvidenceCard from '@/components/EvidenceCard';
-import { Command, ShieldCheck, Target, Mic, MicOff, Zap } from 'lucide-react';
+import SettingsModal from '@/components/SettingsModal';
+import { Command, ShieldCheck, Target, Mic, MicOff, Settings } from 'lucide-react';
 import gsap from 'gsap';
 
 declare global {
@@ -20,16 +21,22 @@ export default function Home() {
   const [summaryData, setSummaryData] = useState<any>(null);
   const [status, setStatus] = useState("SYSTEM READY");
   const [activeCitation, setActiveCitation] = useState<any>(null);
-  const [commandHint, setCommandHint] = useState<string | null>(null);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  
   const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState("");
-  
   const recognition = useRef<any>(null);
+
   const ws = useRef<WebSocket | null>(null);
   const citationRefs = useRef<{ [key: string]: HTMLButtonElement | null }>({});
   const cardRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
   const svgRef = useRef<SVGSVGElement | null>(null);
   const pathRef = useRef<SVGPathElement | null>(null);
+
+  const getApiKeys = () => {
+    const saved = localStorage.getItem('aether_keys');
+    return saved ? JSON.parse(saved) : {};
+  };
 
   useEffect(() => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -50,11 +57,6 @@ export default function Home() {
     }
   }, [isListening]);
 
-  const toggleListening = () => {
-    if (isListening) { recognition.current?.stop(); setIsListening(false); setTranscript(""); }
-    else { recognition.current?.start(); setIsListening(true); setStatus("LISTENING..."); }
-  };
-
   useEffect(() => {
     const connect = () => {
       const socket = new WebSocket("ws://localhost:8001/ws");
@@ -72,16 +74,24 @@ export default function Home() {
     return () => ws.current?.close();
   }, []);
 
-  const sendFeedback = (data: any) => {
-    ws.current?.send(JSON.stringify({ type: "feedback", data }));
-  };
-
   const handleSearch = () => {
     if (!query || !ws.current) return;
     setIsSearching(true);
     if (!query.startsWith("/m ")) { setEvidenceList([]); setSummaryData(null); }
-    ws.current.send(JSON.stringify({ type: "research", query }));
+    ws.current.send(JSON.stringify({ 
+      type: "research", 
+      query,
+      api_keys: getApiKeys() 
+    }));
     setQuery("");
+  };
+
+  const sendFeedback = (data: any) => {
+    ws.current?.send(JSON.stringify({ 
+      type: "feedback", 
+      data,
+      api_keys: getApiKeys() 
+    }));
   };
 
   useLayoutEffect(() => {
@@ -92,11 +102,7 @@ export default function Home() {
         const svgRect = svgRef.current.getBoundingClientRect();
         const bRect = btn.getBoundingClientRect();
         const cRect = card.getBoundingClientRect();
-        const startX = bRect.left + bRect.width / 2 - svgRect.left;
-        const startY = bRect.top + bRect.height / 2 - svgRect.top;
-        const endX = cRect.left + cRect.width / 2 - svgRect.left;
-        const endY = cRect.top + cRect.height / 2 - svgRect.top;
-        const d = `M ${startX} ${startY} C ${startX + (endX - startX) * 0.1} ${startY + (endY - startY) * 0.5}, ${startX + (endX - startX) * 0.9} ${startY + (endY - startY) * 0.5}, ${endX} ${endY}`;
+        const d = `M ${bRect.left + bRect.width / 2 - svgRect.left} ${bRect.top + bRect.height / 2 - svgRect.top} C ${bRect.left + bRect.width / 2 - svgRect.left + (cRect.left + cRect.width / 2 - bRect.left) * 0.1} ${bRect.top + bRect.height / 2 - svgRect.top + (cRect.top + cRect.height / 2 - bRect.top) * 0.5}, ${bRect.left + bRect.width / 2 - svgRect.left + (cRect.left + cRect.width / 2 - bRect.left) * 0.9} ${bRect.top + bRect.height / 2 - svgRect.top + (cRect.top + cRect.height / 2 - bRect.top) * 0.5}, ${cRect.left + cRect.width / 2 - svgRect.left} ${cRect.top + cRect.height / 2 - svgRect.top}`;
         gsap.fromTo(pathRef.current, { strokeDasharray: 1000, strokeDashoffset: 1000, opacity: 0 }, { strokeDashoffset: 0, opacity: 1, duration: 0.8 });
         pathRef.current.setAttribute('d', d);
       }
@@ -106,13 +112,11 @@ export default function Home() {
   return (
     <main className="min-h-screen relative swiss-grid selection:bg-accent selection:text-black overflow-x-hidden">
       <VisualPulse active={isSearching} />
+      <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
       
-      {/* Voice Subtitles Overlay */}
       {isListening && (
-        <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[100] w-full max-w-4xl px-4 md:px-8 pointer-events-none">
-          <p className="text-bauhaus text-4xl md:text-6xl text-center tracking-tighter text-white opacity-90 italic drop-shadow-2xl">
-            {transcript || "LISTENING..."}
-          </p>
+        <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[100] w-full max-w-4xl px-8 pointer-events-none text-center">
+          <p className="text-bauhaus text-4xl md:text-6xl text-white opacity-90 italic drop-shadow-2xl">{transcript || "LISTENING..."}</p>
         </div>
       )}
 
@@ -126,9 +130,14 @@ export default function Home() {
           <div className="h-1 w-8 md:w-12 bg-accent" />
         </div>
         <div className="text-right font-mono pointer-events-auto flex flex-col items-end gap-2">
-          <button onClick={toggleListening} className={`flex items-center gap-2 px-3 py-1 border text-[9px] md:text-[10px] ${isListening ? 'border-accent text-accent animate-pulse' : 'border-white/10 hover:border-white/40'}`}>
-            {isListening ? <Mic className="w-3 h-3" /> : <MicOff className="w-3 h-3" />} {isListening ? 'VOICE ON' : 'VOICE OFF'}
-          </button>
+          <div className="flex items-center gap-3">
+             <button onClick={() => setIsSettingsOpen(true)} className="p-2 border border-white/10 hover:border-accent hover:text-accent transition-all">
+                <Settings className="w-4 h-4" />
+             </button>
+             <button onClick={() => setIsListening(!isListening)} className={`flex items-center gap-2 px-3 py-1 border text-[9px] md:text-[10px] ${isListening ? 'border-accent text-accent animate-pulse' : 'border-white/10 hover:border-white/40'}`}>
+                {isListening ? <Mic className="w-3 h-3" /> : <MicOff className="w-3 h-3" />} {isListening ? 'VOICE ON' : 'VOICE OFF'}
+             </button>
+          </div>
           <div className="text-[9px] md:text-xs text-white/50 tracking-widest uppercase">{status}</div>
         </div>
       </header>
