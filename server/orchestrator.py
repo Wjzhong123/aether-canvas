@@ -57,26 +57,33 @@ class Orchestrator:
         
         # 1. Match specific provider by name
         for env_key, base_url in self.provider_configs.items():
-            provider_name = env_key.lower().replace("_api_key", "").replace("_key", "")
+            # Extract clean provider name from key (e.g., "DEEPSEEK_API_KEY" -> "deepseek")
+            provider_name = env_key.lower().split("_")[0]
             if provider_name in model.lower():
                 target_base = base_url
                 target_key = os.environ.get(env_key)
                 break
         
-        # 2. Heuristic for custom models
-        if not target_base and self.provider_configs and "/" in model:
-            env_key = list(self.provider_configs.keys())[0]
-            target_base = self.provider_configs[env_key]
-            target_key = os.environ.get(env_key)
+        # 2. Heuristic for custom models (if no base found yet)
+        if not target_base and self.provider_configs and ("/" in model or "-" in model):
+            # If there's only one custom provider, use it
+            if len(self.provider_configs) == 1:
+                env_key = list(self.provider_configs.keys())[0]
+                target_base = self.provider_configs[env_key]
+                target_key = os.environ.get(env_key)
 
         if target_base:
             args["api_base"] = target_base
             if target_key: args["api_key"] = target_key
             
-            known_providers = ["gpt", "claude", "deepseek", "gemini", "anthropic", "zhipu", "bedrock", "ollama"]
-            if not any(model.lower().startswith(p) for p in known_providers):
-                if not model.startswith("openai/"):
-                    args["model"] = f"openai/{model}"
+            # LiteLLM: If api_base is used, the model MUST have a provider prefix (e.g., 'openai/model-id')
+            # Check for standard prefixes WITH slashes
+            standard_prefixes = ["gpt-", "claude-", "gemini-"]
+            has_standard_prefix = any(model.lower().startswith(p) for p in standard_prefixes)
+            has_slash_prefix = "/" in model and any(model.lower().startswith(p) for p in ["deepseek/", "anthropic/", "zhipu/", "openai/"])
+            
+            if not (has_standard_prefix or has_slash_prefix):
+                args["model"] = f"openai/{model}"
         
         return args
 
@@ -195,17 +202,20 @@ class Orchestrator:
             response = await litellm.acompletion(
                 **args,
                 messages=[
-                    {"role": "system", "content": f"You are {self.identity['name']}, the {self.identity['role']}. ASYMMETRIC AUDITING ENGINE. \n1. Summarize findings in the user's language.\n2. For EACH claim, provide a citation with 'url' and the EXACT 'point' (text segment) found in that source.\n3. Assign an 'importance_score' (0.0 to 1.0) to each source based on its relevance.\nReturn ONLY valid JSON: {{'summary': '...', 'citations': [{{'url': '...', 'point': '...'}}], 'source_weights': {{'url': 0.8}}}}"},
+                    {"role": "system", "content": f"You are {self.identity['name']}, the {self.identity['role']}. ASYMMETRIC AUDITING ENGINE. \n1. Summarize findings in the user's language.\n2. For EACH claim, provide a citation with 'url' and the EXACT 'point' (text segment) found in that source.\n3. Assign an 'importance_score' (0.0 to 1.0) to each source.\n4. Extract a 'dominant_color' (hex) and 'layout_hint' (e.g., 'wide', 'tall', 'hero') for each source based on its content type.\nReturn ONLY valid JSON: {{'summary': '...', 'citations': [{{'url': '...', 'point': '...'}}], 'source_metadata': {{'url': {{'weight': 0.8, 'color': '#ff0000', 'hint': 'hero'}}}}}}"},
                     {"role": "user", "content": f"Analyze: {query}\n\nEvidence Evidence:\n{context}"}
                 ],
                 response_format={"type": "json_object"}
             )
             result = json.loads(response.choices[0].message.content)
             
-            # Enrich evidences with weights
-            weights = result.get('source_weights', {})
+            # Enrich evidences with weights and visual hints
+            metadata = result.get('source_metadata', {})
             for e in evidences:
-                e['importance'] = weights.get(e['url'], 0.5)
+                meta = metadata.get(e['url'], {})
+                e['importance'] = meta.get('weight', 0.5)
+                e['dominant_color'] = meta.get('color', '#00f2ff')
+                e['layout_hint'] = meta.get('hint', 'standard')
 
             self.memory.add(f"Audit: {result.get('summary', '')[:200]}", user_id=user_id)
             return result

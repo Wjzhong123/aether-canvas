@@ -22,7 +22,7 @@ export default function Home() {
   const [activeCitation, setActiveCitation] = useState<any>(null);
   const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState("");
-  const [agentIdentity, setAgentIdentity] = useState({ name: 'Aether', role: 'CEO', motto: '', theme: 'swiss' });
+  const [agentIdentity, setAgentIdentity] = useState({ name: 'Aether', role: 'CEO', motto: '', theme: 'swiss', premiumModel: 'gpt-4o' });
 
   const ws = useRef<WebSocket | null>(null);
   const recognition = useRef<any>(null);
@@ -225,25 +225,34 @@ export default function Home() {
       <VisualPulse active={isSearching} />
       <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} currentLang={lang} setLang={setLang} />
       
-      <header className="fixed top-0 left-0 w-full p-8 md:p-12 z-[60] flex justify-between items-start pointer-events-none">
+      <header className="fixed top-0 left-0 w-full p-6 md:p-12 z-[60] flex flex-col md:flex-row justify-between items-start gap-8 md:gap-0 pointer-events-none">
         <div className="pointer-events-auto">
           <motion.div initial={{ x: -20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} className="flex flex-col gap-1">
-             <div className="label-mono text-[10px] text-accent tracking-[0.3em] uppercase mb-2">{t.subtitle}</div>
-             <h1 className="font-bauhaus text-5xl md:text-7xl leading-none tracking-tighter text-white uppercase">{agentIdentity.name}</h1>
-             <div className="flex items-center gap-4 mt-4">
-                <div className="h-[2px] w-12 bg-accent" />
-                <div className="label-mono text-[12px] text-white/40 tracking-widest uppercase">{agentIdentity.role}</div>
+             <div className="label-mono text-[9px] md:text-[10px] text-accent tracking-[0.3em] uppercase mb-2">{t.subtitle}</div>
+             <h1 className="font-bauhaus text-4xl md:text-7xl leading-none tracking-tighter text-white uppercase">{agentIdentity.name}</h1>
+             <div className="flex items-center gap-3 md:gap-4 mt-2 md:mt-4">
+                <div className="h-[2px] w-8 md:w-12 bg-accent" />
+                <div className="label-mono text-[10px] md:text-[12px] text-white/40 tracking-widest uppercase">{agentIdentity.role}</div>
+                <motion.div 
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  key={(agentIdentity as any).premiumModel}
+                  className="px-2 py-0.5 rounded border border-accent/30 text-accent text-[8px] font-mono uppercase tracking-tighter flex items-center gap-1.5 bg-accent/5"
+                >
+                   <Cpu className="w-2.5 h-2.5" />
+                   {(agentIdentity as any).premiumModel || 'gpt-4o'}
+                </motion.div>
              </div>
           </motion.div>
         </div>
 
-        <div className="text-right pointer-events-auto flex flex-col items-end gap-6">
-          <div className="flex items-center gap-3 bg-black/40 backdrop-blur-xl p-2 rounded-2xl border border-white/5">
-             <button onClick={() => setIsSettingsOpen(true)} className="group p-4 rounded-xl hover:bg-accent/10 transition-all border border-transparent hover:border-accent/20">
-                <Settings className="w-5 h-5 text-white/40 group-hover:text-accent transition-colors" />
+        <div className="text-right pointer-events-auto flex flex-col items-end gap-4 md:gap-6">
+          <div className="flex items-center gap-2 md:gap-3 bg-black/40 backdrop-blur-xl p-1.5 md:p-2 rounded-2xl border border-white/5">
+             <button onClick={() => setIsSettingsOpen(true)} className="group p-3 md:p-4 rounded-xl hover:bg-accent/10 transition-all border border-transparent hover:border-accent/20">
+                <Settings className="w-4 h-4 md:w-5 md:h-5 text-white/40 group-hover:text-accent transition-colors" />
              </button>
-             <button onClick={toggleListening} className={`flex items-center gap-3 px-8 py-4 rounded-xl border text-[11px] font-bold tracking-[0.2em] transition-all uppercase ${isListening ? 'border-accent text-accent bg-accent/10 sci-fi-glow' : 'border-white/10 text-white/40 hover:border-white/20 bg-white/5'}`}>
-                {isListening ? <Zap className="w-4 h-4 animate-pulse" /> : <Mic className="w-4 h-4" />} 
+             <button onClick={toggleListening} className={`flex items-center gap-2 md:gap-3 px-4 md:px-8 py-3 md:py-4 rounded-xl border text-[9px] md:text-[11px] font-bold tracking-[0.2em] transition-all uppercase ${isListening ? 'border-accent text-accent bg-accent/10 sci-fi-glow' : 'border-white/10 text-white/40 hover:border-white/20 bg-white/5'}`}>
+                {isListening ? <Zap className="w-3 h-3 md:w-4 md:h-4 animate-pulse" /> : <Mic className="w-3 h-3 md:w-4 md:h-4" />} 
                 {isListening ? t.voice_on : t.voice_off}
              </button>
           </div>
@@ -293,16 +302,49 @@ export default function Home() {
       </header>
 
       <div className="relative z-20 w-full pt-60 px-8 pb-40">
-        {/* Asymmetric Masonry Evidence Layout */}
-        <div className="max-w-[1400px] mx-auto columns-1 md:columns-2 lg:columns-3 gap-8 space-y-8 mb-40">
+        {/* Generative Editorial Grid */}
+        <div className="max-w-[1400px] mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10 auto-rows-[minmax(200px,auto)] mb-40">
           {evidenceList.map((evidence, idx) => (
             <motion.div 
               key={idx} 
               layout
               ref={el => { cardRefs.current[evidence.url] = el; }} 
-              className="break-inside-avoid"
+              className={`relative ${
+                evidence.importance > 0.8 ? 'md:col-span-2 md:row-span-3' : 
+                (evidence as any).layout_hint === 'tall' ? 'row-span-3' : 'row-span-2'
+              }`}
             >
               <EvidenceCard evidence={evidence} lang={lang} activeLocator={activeCitation?.point} />
+            </motion.div>
+          ))}
+          
+          {/* Streaming Intent Skeletons */}
+          {isSearching && Array.from({ length: 3 }).map((_, i) => (
+            <motion.div 
+              key={`skeleton-${i}`}
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="row-span-2 border border-white/5 bg-white/[0.02] rounded-3xl overflow-hidden relative group"
+            >
+               <div className="absolute inset-0 bg-gradient-to-b from-transparent via-white/[0.05] to-transparent -translate-y-full group-hover:translate-y-full transition-transform duration-[2000ms] ease-in-out repeat-infinite" />
+               <div className="p-8 space-y-4">
+                  <div className="flex items-center gap-3">
+                     <div className="w-8 h-8 rounded-lg bg-white/5 animate-pulse" />
+                     <div className="w-24 h-2 bg-white/5 rounded animate-pulse" />
+                  </div>
+                  <div className="w-full h-32 bg-white/5 rounded-2xl animate-pulse" />
+                  <div className="space-y-2">
+                     <div className="w-full h-2 bg-white/5 rounded animate-pulse" />
+                     <div className="w-2/3 h-2 bg-white/5 rounded animate-pulse" />
+                  </div>
+                  <div className="pt-8 border-t border-white/5 flex justify-between">
+                     <div className="w-12 h-2 bg-white/5 rounded" />
+                     <Activity className="w-4 h-4 text-white/10 animate-spin-slow" />
+                  </div>
+               </div>
+               <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="label-mono text-[8px] text-white/10 tracking-[0.4em] uppercase">Penetrating_Sources...</div>
+               </div>
             </motion.div>
           ))}
         </div>
