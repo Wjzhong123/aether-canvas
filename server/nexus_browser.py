@@ -31,8 +31,8 @@ class NexusBrowser:
     async def get_visual_evidence(self, url: str) -> Dict:
         page = await self.context.new_page()
         try:
-            await page.goto(url, wait_until="networkidle", timeout=60000)
-            await asyncio.sleep(2)
+            await page.goto(url, wait_until="domcontentloaded", timeout=15000)
+            await asyncio.sleep(1)
             
             screenshot_bytes = await page.screenshot(full_page=False)
             palette = self._extract_palette(screenshot_bytes)

@@ -1,0 +1,386 @@
+[92m14:24:18 - LiteLLM:WARNING[0m: get_model_cost_map.py:271 - LiteLLM: Failed to fetch remote model cost map from https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json: [SSL: UNEXPECTED_EOF_WHILE_READING] EOF occurred in violation of protocol (_ssl.c:1081). Falling back to local backup.
+WARNING:LiteLLM:LiteLLM: Failed to fetch remote model cost map from https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json: [SSL: UNEXPECTED_EOF_WHILE_READING] EOF occurred in violation of protocol (_ssl.c:1081). Falling back to local backup.
+WARNING:MemoryEngine:MemoryEngine: No API key available for initialization.
+/usr/local/lib/python3.14/site-packages/websockets/legacy/__init__.py:6: DeprecationWarning: websockets.legacy is deprecated; see https://websockets.readthedocs.io/en/stable/howto/upgrade.html for upgrade instructions
+  warnings.warn(  # deprecated in 14.0 - 2024-11-09
+/usr/local/lib/python3.14/site-packages/uvicorn/protocols/websockets/websockets_impl.py:17: DeprecationWarning: websockets.server.WebSocketServerProtocol is deprecated
+  from websockets.server import WebSocketServerProtocol
+INFO:     Started server process [58067]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8001 (Press CTRL+C to quit)
+/usr/local/lib/python3.14/site-packages/websockets/legacy/server.py:1178: DeprecationWarning: remove second argument of ws_handler
+  warnings.warn("remove second argument of ws_handler", DeprecationWarning)
+INFO:     127.0.0.1:64701 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:     127.0.0.1:64703 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:Orchestrator:Decomposing intent for: 你好 using deepseek/deepseek-chat
+[92m15:04:39 - LiteLLM:INFO[0m: utils.py:3932 - 
+LiteLLM completion() model= deepseek-chat; provider = deepseek
+INFO:LiteLLM:
+LiteLLM completion() model= deepseek-chat; provider = deepseek
+INFO:Orchestrator:Decomposed into 1 queries.
+/usr/local/lib/python3.14/site-packages/colorthief.py:65: DeprecationWarning: Image.Image.getdata is deprecated and will be removed in Pillow 14 (2027-10-15). Use get_flattened_data instead.
+  pixels = image.getdata()
+INFO:Orchestrator:Auditing results for: 你好 with 1 evidences using deepseek/deepseek-chat
+[92m15:04:52 - LiteLLM:INFO[0m: utils.py:3932 - 
+LiteLLM completion() model= deepseek-chat; provider = deepseek
+INFO:LiteLLM:
+LiteLLM completion() model= deepseek-chat; provider = deepseek
+INFO:Orchestrator:Audit complete.
+INFO:Orchestrator:Decomposing intent for: 介绍你自己 using deepseek/deepseek-chat
+[92m15:07:01 - LiteLLM:INFO[0m: utils.py:3932 - 
+LiteLLM completion() model= deepseek-chat; provider = deepseek
+INFO:LiteLLM:
+LiteLLM completion() model= deepseek-chat; provider = deepseek
+INFO:Orchestrator:Decomposed into 1 queries.
+INFO:Orchestrator:Auditing results for: 介绍你自己 with 1 evidences using deepseek/deepseek-chat
+[92m15:07:03 - LiteLLM:INFO[0m: utils.py:3932 - 
+LiteLLM completion() model= deepseek-chat; provider = deepseek
+INFO:LiteLLM:
+LiteLLM completion() model= deepseek-chat; provider = deepseek
+INFO:Orchestrator:Audit complete.
+INFO:     connection closed
+INFO:     127.0.0.1:57539 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:     127.0.0.1:57583 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:     connection closed
+INFO:     connection closed
+INFO:     127.0.0.1:57591 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:     connection closed
+INFO:     connection closed
+INFO:     127.0.0.1:60267 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:     127.0.0.1:60270 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:     connection closed
+INFO:     127.0.0.1:50344 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:     connection closed
+INFO:     127.0.0.1:50661 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:     connection closed
+INFO:     127.0.0.1:50969 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:     connection closed
+INFO:     127.0.0.1:51189 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:     127.0.0.1:51191 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:     connection closed
+INFO:     connection closed
+INFO:     127.0.0.1:51196 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:     127.0.0.1:51200 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:     connection closed
+INFO:     127.0.0.1:51203 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:     127.0.0.1:51206 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:     127.0.0.1:51214 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:     127.0.0.1:51216 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     127.0.0.1:59897 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:     127.0.0.1:60143 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:     connection closed
+INFO:     127.0.0.1:61669 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:     127.0.0.1:61671 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     127.0.0.1:61674 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:     127.0.0.1:61676 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:     127.0.0.1:61678 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:     127.0.0.1:61680 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:     127.0.0.1:61703 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:     connection closed
+INFO:     127.0.0.1:61709 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:     connection closed
+INFO:     127.0.0.1:61713 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:     127.0.0.1:61715 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:     127.0.0.1:61717 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:     127.0.0.1:61719 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:Orchestrator:Decomposing intent for: 你好 using deepseek/deepseek-chat
+[92m19:34:14 - LiteLLM:INFO[0m: utils.py:3932 - 
+LiteLLM completion() model= deepseek-chat; provider = deepseek
+INFO:LiteLLM:
+LiteLLM completion() model= deepseek-chat; provider = deepseek
+INFO:Orchestrator:Decomposed into 1 queries.
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     127.0.0.1:50078 - "WebSocket /ws" [accepted]
+INFO:     connection open
+ERROR:AetherCanvas:Fetch Error: 
+INFO:Orchestrator:Auditing results for: 你好 with 1 evidences using deepseek/deepseek-chat
+[92m19:35:15 - LiteLLM:INFO[0m: utils.py:3932 - 
+LiteLLM completion() model= deepseek-chat; provider = deepseek
+INFO:LiteLLM:
+LiteLLM completion() model= deepseek-chat; provider = deepseek
+INFO:Orchestrator:Audit complete.
+ERROR:AetherCanvas:Audit Error: Cannot call "send" once a close message has been sent.
+ERROR:AetherCanvas:Research Error: Cannot call "send" once a close message has been sent.
+ERROR:AetherCanvas:WS Critical Error: Cannot call "send" once a close message has been sent.
+INFO:     connection closed
+INFO:     127.0.0.1:50340 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:     connection closed
+INFO:     127.0.0.1:50346 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:     127.0.0.1:50348 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:     connection closed
+INFO:     127.0.0.1:50350 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:     127.0.0.1:50353 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:     127.0.0.1:50356 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:     connection closed
+INFO:     127.0.0.1:50382 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:     127.0.0.1:50388 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:     127.0.0.1:52589 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:Orchestrator:Decomposing intent for: hello using deepseek/deepseek-chat
+[92m19:46:21 - LiteLLM:INFO[0m: utils.py:3932 - 
+LiteLLM completion() model= deepseek-chat; provider = deepseek
+INFO:LiteLLM:
+LiteLLM completion() model= deepseek-chat; provider = deepseek
+INFO:Orchestrator:Decomposed into 1 queries.
+INFO:Orchestrator:Auditing results for: hello with 1 evidences using deepseek/deepseek-chat
+[92m19:47:23 - LiteLLM:INFO[0m: utils.py:3932 - 
+LiteLLM completion() model= deepseek-chat; provider = deepseek
+INFO:LiteLLM:
+LiteLLM completion() model= deepseek-chat; provider = deepseek
+INFO:Orchestrator:Audit complete.
+INFO:     connection closed
+INFO:     127.0.0.1:53026 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:     connection closed
+INFO:     127.0.0.1:53102 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:     connection closed
+INFO:     127.0.0.1:55269 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:     127.0.0.1:54894 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:     connection closed
+INFO:     127.0.0.1:55299 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:     connection closed
+INFO:     127.0.0.1:56846 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:     connection closed
+INFO:     127.0.0.1:57272 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:     connection closed
+INFO:     127.0.0.1:57831 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:     127.0.0.1:58289 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:     connection closed
+INFO:     connection closed
+INFO:     127.0.0.1:58316 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     127.0.0.1:60664 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:     127.0.0.1:60671 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:     127.0.0.1:60675 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:     127.0.0.1:60677 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:     127.0.0.1:60679 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:Orchestrator:Decomposing intent for: 你好 using deepseek/deepseek-chat
+[92m21:39:38 - LiteLLM:INFO[0m: utils.py:3932 - 
+LiteLLM completion() model= deepseek-chat; provider = deepseek
+INFO:LiteLLM:
+LiteLLM completion() model= deepseek-chat; provider = deepseek
+INFO:Orchestrator:Decomposed into 1 queries.
+INFO:Orchestrator:Auditing results for: 你好 with 1 evidences using deepseek/deepseek-chat
+[92m21:40:40 - LiteLLM:INFO[0m: utils.py:3932 - 
+LiteLLM completion() model= deepseek-chat; provider = deepseek
+INFO:LiteLLM:
+LiteLLM completion() model= deepseek-chat; provider = deepseek
+INFO:Orchestrator:Audit complete.
+INFO:Orchestrator:Decomposing intent for: 介绍你自己 using deepseek/deepseek-chat
+[92m21:41:37 - LiteLLM:INFO[0m: utils.py:3932 - 
+LiteLLM completion() model= deepseek-chat; provider = deepseek
+INFO:LiteLLM:
+LiteLLM completion() model= deepseek-chat; provider = deepseek
+INFO:Orchestrator:Decomposed into 3 queries.
+INFO:Orchestrator:Auditing results for: 介绍你自己 with 3 evidences using deepseek/deepseek-chat
+[92m21:44:39 - LiteLLM:INFO[0m: utils.py:3932 - 
+LiteLLM completion() model= deepseek-chat; provider = deepseek
+INFO:LiteLLM:
+LiteLLM completion() model= deepseek-chat; provider = deepseek
+INFO:Orchestrator:Audit complete.
+INFO:     connection closed
+INFO:     127.0.0.1:62446 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:     connection closed
+INFO:     127.0.0.1:62770 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:     connection closed
+INFO:     127.0.0.1:64228 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     127.0.0.1:64237 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:     127.0.0.1:64239 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:     127.0.0.1:64241 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:     127.0.0.1:64244 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:     127.0.0.1:64246 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:     127.0.0.1:64275 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:     127.0.0.1:64277 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:     127.0.0.1:64279 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:     127.0.0.1:64281 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:Orchestrator:Decomposing intent for: 你好请介绍自己 using deepseek/deepseek-chat
+[92m21:53:48 - LiteLLM:INFO[0m: utils.py:3932 - 
+LiteLLM completion() model= deepseek-chat; provider = deepseek
+INFO:LiteLLM:
+LiteLLM completion() model= deepseek-chat; provider = deepseek
+INFO:Orchestrator:Decomposed into 1 queries.
+INFO:Orchestrator:Auditing results for: 你好请介绍自己 with 1 evidences using deepseek/deepseek-chat
+[92m21:54:50 - LiteLLM:INFO[0m: utils.py:3932 - 
+LiteLLM completion() model= deepseek-chat; provider = deepseek
+INFO:LiteLLM:
+LiteLLM completion() model= deepseek-chat; provider = deepseek
+INFO:Orchestrator:Audit complete.
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     127.0.0.1:65499 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:     127.0.0.1:65525 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:     127.0.0.1:65527 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:     127.0.0.1:65529 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:     127.0.0.1:65531 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:     127.0.0.1:65534 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:     127.0.0.1:49154 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:     127.0.0.1:49171 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:     127.0.0.1:49173 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:     127.0.0.1:49175 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     127.0.0.1:49278 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     127.0.0.1:49282 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     127.0.0.1:49285 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     127.0.0.1:49287 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:     127.0.0.1:49290 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     127.0.0.1:49301 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:     connection closed
+INFO:     127.0.0.1:49484 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:     connection closed
+INFO:     127.0.0.1:49486 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:     127.0.0.1:49488 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:     127.0.0.1:49505 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:Orchestrator:Decomposing intent for: 你好大姐你叫什么名字 using deepseek/deepseek-chat
+[92m22:00:07 - LiteLLM:INFO[0m: utils.py:3932 - 
+LiteLLM completion() model= deepseek-chat; provider = deepseek
+INFO:LiteLLM:
+LiteLLM completion() model= deepseek-chat; provider = deepseek
+INFO:Orchestrator:Decomposed into 1 queries.
+INFO:Orchestrator:Auditing results for: 你好大姐你叫什么名字 with 1 evidences using deepseek/deepseek-chat
+[92m22:01:10 - LiteLLM:INFO[0m: utils.py:3932 - 
+LiteLLM completion() model= deepseek-chat; provider = deepseek
+INFO:LiteLLM:
+LiteLLM completion() model= deepseek-chat; provider = deepseek
+INFO:Orchestrator:Audit complete.
+INFO:     Shutting down
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [58067]

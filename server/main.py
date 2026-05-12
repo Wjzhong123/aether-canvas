@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import asyncio
 import json
 import logging
+import os
 from nexus_browser import NexusBrowser
 from orchestrator import Orchestrator
 from contextlib import asynccontextmanager
@@ -12,6 +13,28 @@ logger = logging.getLogger("AetherCanvas")
 
 nexus = NexusBrowser()
 orch = Orchestrator()
+
+# Localization for status messages
+STATUS_LOCALES = {
+    "zh": {
+        "sync_chat": "核心同步 // 正在对话...",
+        "fetching": "正在检索证据: {task}",
+        "complete": "系统就绪 // 任务完成",
+        "identity_synced": "身份信息已同步",
+        "no_evidence": "未发现有效证据",
+        "mode": "当前模式: {mode}",
+        "memory": "记忆检索: {task}"
+    },
+    "en": {
+        "sync_chat": "SYNC_CHAT // RESPONDING...",
+        "fetching": "FETCHING_EVIDENCE: {task}",
+        "complete": "SYSTEM_READY // COMPLETE",
+        "identity_synced": "IDENTITY_SYNCHRONIZED",
+        "no_evidence": "NO_EVIDENCE_FOUND",
+        "mode": "MODE: {mode}",
+        "memory": "MEMORY_RETRIEVAL: {task}"
+    }
+}
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -33,49 +56,105 @@ app.add_middleware(
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
     try:
+        await websocket.send_json({"type": "identity", "content": orch.identity})
+        
         while True:
             data = await websocket.receive_text()
             message = json.loads(data)
-            api_keys = message.get("api_keys", {}) # Received from frontend
+            api_keys = message.get("api_keys", {})
+            lang = message.get("lang", "en")
+            st = STATUS_LOCALES.get(lang, STATUS_LOCALES["en"])
             
             if message.get("type") == "research":
                 raw_query = message.get("query")
-                cmd_data = await orch.parse_command(raw_query)
-                command = cmd_data["command"]
-                query = cmd_data["query"]
+                try:
+                    cmd_data = await orch.parse_command(raw_query)
+                    command = cmd_data["command"]
+                    query = cmd_data["query"]
 
-                if command == "clear":
-                    await websocket.send_json({"type": "clear"})
-                    continue
+                    if command == "clear":
+                        await websocket.send_json({"type": "clear"})
+                        continue
 
-                await websocket.send_json({"type": "status", "content": f"CMD: {command.upper()} | PLANNING..."})
-                tasks = await orch.decompose_intent(cmd_data, api_keys)
-                
-                if command == "memory":
-                    for task in tasks:
-                        await websocket.send_json({"type": "status", "content": f"MEMORY: {task}"})
-                    await websocket.send_json({"type": "summary", "content": {"summary": "\n".join(tasks), "citations": []}})
-                    continue
+                    # Check for intent
+                    intent = await orch.classify_intent(query, api_keys)
+                    if intent == "CHAT":
+                        await websocket.send_json({"type": "status", "content": st["sync_chat"]})
+                        full_reply = ""
+                        async for chunk in orch.chat_stream(query, api_keys):
+                            full_reply += chunk
+                            await websocket.send_json({"type": "summary_chunk", "content": chunk})
+                        await websocket.send_json({"type": "summary", "content": {"summary": full_reply, "citations": []}})
+                        await websocket.send_json({"type": "status", "content": st["complete"]})
+                        continue
 
-                collected_evidence = []
-                for task in tasks:
-                    url = task if task.startswith("http") else f"https://www.bing.com/search?q={task}"
-                    await websocket.send_json({"type": "status", "content": f"FETCHING: {task}"})
-                    evidence = await nexus.get_visual_evidence(url)
-                    collected_evidence.append(evidence)
-                    await websocket.send_json({"type": "evidence", "content": evidence})
-                
-                await websocket.send_json({"type": "status", "content": "AUDITING..."})
-                summary = await orch.audit_and_summarize(query, collected_evidence, api_keys)
-                await websocket.send_json({"type": "summary", "content": summary})
-                await websocket.send_json({"type": "status", "content": "COMPLETE."})
+                    await websocket.send_json({"type": "status", "content": st["mode"].format(mode=command.upper())})
+                    
+                    # Decompose intent
+                    try:
+                        tasks = await orch.decompose_intent(cmd_data, api_keys)
+                    except Exception as e:
+                        logger.error(f"Intent Error: {e}")
+                        await websocket.send_json({"type": "status", "content": f"ERROR: {str(e)}"})
+                        continue
+                    
+                    if command == "memory":
+                        for task in tasks:
+                            await websocket.send_json({"type": "status", "content": st["memory"].format(task=task)})
+                        await websocket.send_json({"type": "summary", "content": {"summary": "\n".join(tasks), "citations": []}})
+                        continue
+
+                    async def fetch_one(t):
+                        url = t if t.startswith("http") else f"https://www.bing.com/search?q={t}"
+                        await websocket.send_json({"type": "status", "content": st["fetching"].format(task=t)})
+                        try:
+                            evidence = await nexus.get_visual_evidence(url)
+                            await websocket.send_json({"type": "evidence", "content": evidence})
+                            return evidence
+                        except Exception as e:
+                            logger.error(f"Fetch Error: {e}")
+                            return None
+
+                    # Parallel execution
+                    evidence_results = await asyncio.gather(*[fetch_one(t) for t in tasks])
+                    collected_evidence = [e for e in evidence_results if e]
+                    
+                    if not collected_evidence:
+                        await websocket.send_json({"type": "status", "content": st["no_evidence"]})
+                        continue
+
+                    # Summarize
+                    try:
+                        summary = await orch.audit_and_summarize(query, collected_evidence, api_keys)
+                        await websocket.send_json({"type": "summary", "content": summary})
+                        await websocket.send_json({"type": "status", "content": st["complete"]})
+                    except Exception as e:
+                        logger.error(f"Audit Error: {e}")
+                        await websocket.send_json({"type": "status", "content": f"AUDIT_ERROR: {str(e)}"})
+                except Exception as e:
+                    logger.error(f"Research Error: {e}")
+                    await websocket.send_json({"type": "status", "content": f"SYSTEM_ERROR: {str(e)}"})
             
             elif message.get("type") == "feedback":
-                rule = await orch.learn_from_feedback(message.get("data"), api_keys)
-                await websocket.send_json({"type": "status", "content": f"EVOLVED: {rule}"})
+                try:
+                    rule = await orch.learn_from_feedback(message.get("data"), api_keys)
+                    await websocket.send_json({"type": "status", "content": f"EVOLVED: {rule}"})
+                except Exception as e:
+                    logger.error(f"Feedback Error: {e}")
+            
+            elif message.get("type") == "update_identity":
+                new_identity = message.get("content")
+                with open("agent_identity.json", "w") as f:
+                    json.dump(new_identity, f)
+                orch.identity = new_identity
+                await websocket.send_json({"type": "status", "content": st["identity_synced"]})
                 
     except WebSocketDisconnect: pass
-    except Exception as e: logger.error(f"WS Error: {e}")
+    except Exception as e: 
+        logger.error(f"WS Critical Error: {e}")
+        try:
+            await websocket.send_json({"type": "status", "content": "CRITICAL_CONNECTION_ERROR"})
+        except: pass
 
 if __name__ == "__main__":
     import uvicorn
