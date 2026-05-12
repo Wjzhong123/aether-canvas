@@ -169,7 +169,10 @@ const EvidenceCard: React.FC<EvidenceCardProps> = ({ evidence, activeLocator, on
         <div>
           <div className="flex items-center gap-3 mb-4">
             <span className="text-[9px] font-bold px-2 py-0.5 rounded border border-white/10 text-white/50 uppercase tracking-widest bg-white/5">
-              {new URL(evidence.url).hostname.replace('www.', '')}
+              {(() => {
+                try { return new URL(evidence.url).hostname.replace('www.', ''); }
+                catch { return 'SOURCE'; }
+              })()}
             </span>
             {evidence.importance && evidence.importance > 0.8 && (
               <motion.span 

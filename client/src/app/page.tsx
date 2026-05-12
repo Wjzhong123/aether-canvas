@@ -61,10 +61,17 @@ export default function Home() {
   const toggleLiveMode = () => {
     if (isLiveMode) {
       stopLiveMode();
+      try { recognition.current?.stop(); } catch(e) {}
+      setIsListening(false);
       setIsLiveMode(false);
     } else {
+      if (typeof window !== 'undefined') window.speechSynthesis.cancel();
       startLiveMode();
+      try { recognition.current?.start(); } catch(e) {}
+      setIsListening(true);
       setIsLiveMode(true);
+      setTranscript("");
+      setQuery("");
     }
   };
 
