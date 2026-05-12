@@ -3,14 +3,15 @@
 import React, { useState, useEffect, useRef } from 'react';
 import VisualPulse from '@/components/VisualPulse';
 import EvidenceCard from '@/components/EvidenceCard';
-import { Command, MessageSquare } from 'lucide-react';
+import { Command, MessageSquare, ShieldCheck, Target } from 'lucide-react';
 
 export default function Home() {
   const [query, setQuery] = useState("");
   const [isSearching, setIsSearching] = useState(false);
   const [evidenceList, setEvidenceList] = useState<any[]>([]);
-  const [summary, setSummary] = useState<string | null>(null);
+  const [summaryData, setSummaryData] = useState<any>(null);
   const [status, setStatus] = useState("SYSTEM READY");
+  const [activeCitation, setActiveCitation] = useState<any>(null);
   const ws = useRef<WebSocket | null>(null);
 
   useEffect(() => {
@@ -21,7 +22,7 @@ export default function Home() {
         const data = JSON.parse(event.data);
         if (data.type === 'status') setStatus(data.content.toUpperCase());
         else if (data.type === 'evidence') setEvidenceList((prev) => [data.content, ...prev]);
-        else if (data.type === 'summary') { setSummary(data.content); setIsSearching(false); }
+        else if (data.type === 'summary') { setSummaryData(data.content); setIsSearching(false); }
       };
       socket.onclose = () => { setStatus("SYSTEM OFFLINE - RECONNECTING..."); setTimeout(connect, 3000); };
     };
@@ -33,7 +34,8 @@ export default function Home() {
     if (!query || !ws.current) return;
     setIsSearching(true);
     setEvidenceList([]);
-    setSummary(null);
+    setSummaryData(null);
+    setActiveCitation(null);
     ws.current.send(JSON.stringify({ type: "research", query }));
     setQuery("");
   };
@@ -64,29 +66,44 @@ export default function Home() {
         <div className="masonry-columns mb-12">
           {evidenceList.map((evidence, i) => (
             <div key={i} className="masonry-item animate-in fade-in slide-in-from-bottom-12 duration-1000 ease-out">
-              <EvidenceCard evidence={evidence} />
+              <EvidenceCard 
+                evidence={evidence} 
+                activeLocator={activeCitation?.url === evidence.url ? activeCitation?.locator_text : null} 
+              />
             </div>
           ))}
         </div>
 
-        {/* Summary Layer */}
-        {summary && (
+        {/* Asymmetric Auditing Summary Layer */}
+        {summaryData && (
           <div className="max-w-4xl mx-auto glass border-l-8 border-accent p-12 mb-24 animate-in slide-in-from-left-12 duration-700 bg-surface/80">
             <div className="flex items-center gap-4 mb-8">
-              <MessageSquare className="w-8 h-8 text-accent" />
-              <h2 className="text-bauhaus text-4xl tracking-tighter uppercase">Audited_结晶</h2>
+              <ShieldCheck className="w-8 h-8 text-accent" />
+              <h2 className="text-bauhaus text-4xl tracking-tighter uppercase">Asymmetric_Auditing</h2>
             </div>
-            <div className="prose prose-invert max-w-none font-mono text-sm leading-relaxed text-white/80 whitespace-pre-wrap">
-              {summary}
+            
+            <div className="prose prose-invert max-w-none font-mono text-sm leading-relaxed text-white/80 mb-12">
+              {summaryData.summary}
+            </div>
+
+            <div className="space-y-4">
+              <h3 className="font-mono text-[10px] text-white/30 uppercase tracking-[0.3em] mb-4 flex items-center gap-2">
+                <Target className="w-3 h-3" /> PIXEL_LEVEL_EVIDENCE_MAP
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {summaryData.citations?.map((cit, i) => (
+                  <button 
+                    key={i}
+                    onClick={() => setActiveCitation(cit)}
+                    className={`text-left p-4 glass border-l-2 transition-all duration-300 hover:bg-accent/10 ${activeCitation === cit ? 'border-accent bg-accent/5' : 'border-white/10'}`}
+                  >
+                    <p className="font-mono text-[11px] text-white/90 mb-1">“{cit.point}”</p>
+                    <p className="font-mono text-[9px] text-white/30 truncate">{cit.url}</p>
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
-        )}
-        
-        {isSearching && evidenceList.length === 0 && (
-           <div className="flex flex-col items-center justify-center h-[40vh]">
-              <div className="w-16 h-1 bg-accent animate-pulse mb-4" />
-              <p className="text-bauhaus text-3xl tracking-tighter opacity-80 uppercase">Bursting_Exploration...</p>
-           </div>
         )}
       </div>
 
@@ -97,15 +114,15 @@ export default function Home() {
             <div className="pl-4"><Command className="w-5 h-5 text-accent" /></div>
             <input 
               type="text" 
-              placeholder="INPUT RESEARCH INTENT OR URL"
-              className="flex-1 bg-transparent border-none outline-none font-mono text-sm py-5 px-2 tracking-[0.2em] uppercase placeholder:text-white/10"
+              placeholder="INPUT RESEARCH INTENT..."
+              className="flex-1 bg-transparent border-none outline-none font-mono text-sm py-5 px-2 tracking-[0.2em] uppercase"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
             />
             <button 
               onClick={handleSearch} 
-              className="bg-accent hover:bg-white text-black px-8 py-5 transition-all duration-500 font-bauhaus text-xl group-hover:px-12"
+              className="bg-accent hover:bg-white text-black px-8 py-5 transition-all duration-500 font-bauhaus text-xl"
             >
               EXEC
             </button>

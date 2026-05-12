@@ -17,30 +17,33 @@ class Orchestrator:
         self.memory = MemoryEngine()
 
     async def decompose_intent(self, query: str, user_id: str = "default_user") -> List[str]:
-        # Context retrieval from memory
         mems = self.memory.search(query, user_id=user_id)
         context = "\n".join([m['text'] for m in mems]) if mems else ""
         
         response = await litellm.acompletion(
             model=self.cheap_model,
             messages=[
-                {"role": "system", "content": f"Decompose research intent. Previous Context: {context}. Return JSON list."},
+                {"role": "system", "content": f"Decompose research intent. Previous Context: {context}. Return JSON list in 'queries' key."},
                 {"role": "user", "content": query}
             ],
             response_format={"type": "json_object"}
         )
-        return json.loads(response.choices[0].message.content).get("queries", [query])
+        data = json.loads(response.choices[0].message.content)
+        return data.get("queries", [query])
 
-    async def audit_and_summarize(self, query: str, evidences: List[Dict], user_id: str = "default_user") -> str:
-        context = "\n".join([f"Source: {e['url']}\nContent: {e.get('text', '')[:500]}" for e in evidences])
+    async def audit_and_summarize(self, query: str, evidences: List[Dict], user_id: str = "default_user") -> Dict:
+        logger.info(f"Auditing and summarizing {len(evidences)} evidences")
+        context = "\n".join([f"Source: {e['url']}\nContent: {e.get('text', '')[:1000]}" for e in evidences])
+        
         response = await litellm.acompletion(
             model=self.premium_model,
             messages=[
-                {"role": "system", "content": "Auditing Agent. Summarize evidence with pixel-level alignment."},
+                {"role": "system", "content": "Asymmetric Auditing Agent. Provide a summary with 'citations'. Each citation must have 'point', 'url', and 'locator_text' (exact text from source). Return JSON object {summary: str, citations: list}."},
                 {"role": "user", "content": f"Query: {query}\nEvidence: {context}"}
-            ]
+            ],
+            response_format={"type": "json_object"}
         )
-        summary = response.choices[0].message.content
-        # Store conclusion in memory
-        self.memory.add(f"Research on {query}: {summary[:200]}...", user_id=user_id)
-        return summary
+        
+        result = json.loads(response.choices[0].message.content)
+        self.memory.add(f"Audit Result for {query}: {result.get('summary', '')[:200]}", user_id=user_id)
+        return result

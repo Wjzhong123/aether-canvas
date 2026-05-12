@@ -17,7 +17,6 @@ class NexusBrowser:
         self.context = None
 
     async def start(self):
-        logger.info("Starting NexusBrowser...")
         self.playwright = await async_playwright().start()
         self.browser = await self.playwright.chromium.launch(headless=True)
         self.context = await self.browser.new_context(
@@ -30,35 +29,39 @@ class NexusBrowser:
         if self.playwright: await self.playwright.stop()
 
     async def get_visual_evidence(self, url: str) -> Dict:
-        logger.info(f"Getting visual evidence for: {url}")
         page = await self.context.new_page()
         try:
             await page.goto(url, wait_until="networkidle", timeout=60000)
             await asyncio.sleep(2)
             
-            # 1. Screenshot & Palette
             screenshot_bytes = await page.screenshot(full_page=False)
             palette = self._extract_palette(screenshot_bytes)
             
-            # 2. Hero Image
-            hero_image = await page.evaluate("""() => {
-                const imgs = Array.from(document.querySelectorAll('img'));
-                const large = imgs.filter(i => i.width > 400 && i.height > 300);
-                return large.length > 0 ? large[0].src : null;
+            # Extract elements for pixel-level alignment
+            elements = await page.evaluate("""() => {
+                const results = [];
+                const selectors = ['h1', 'h2', 'p', 'article', 'section'];
+                selectors.forEach(sel => {
+                    document.querySelectorAll(sel).forEach(el => {
+                        const rect = el.getBoundingClientRect();
+                        if (rect.width > 50 && rect.height > 20 && el.innerText.length > 20) {
+                            results.push({
+                                tag: el.tagName,
+                                text: el.innerText.substring(0, 100),
+                                rect: { x: rect.x, y: rect.y, w: rect.width, h: rect.height }
+                            });
+                        }
+                    });
+                });
+                return results;
             }""")
-            
-            # 3. Video Frames (Simple detection)
-            video_frames = []
-            if "youtube.com" in url or "youtu.be" in url:
-                video_frames = await self._capture_video_frames(page)
 
             return {
                 "url": url,
                 "title": await page.title(),
                 "screenshot": base64.b64encode(screenshot_bytes).decode('utf-8'),
                 "palette": palette,
-                "hero_image": hero_image,
-                "video_frames": video_frames,
+                "elements": elements,
                 "status": "success"
             }
         except Exception as e:
@@ -69,19 +72,5 @@ class NexusBrowser:
     def _extract_palette(self, screenshot_bytes: bytes) -> List[str]:
         try:
             color_thief = ColorThief(io.BytesIO(screenshot_bytes))
-            palette = color_thief.get_palette(color_count=5, quality=10)
-            return [f"#{r:02x}{g:02x}{b:02x}" for r, g, b in palette]
-        except:
-            return ["#000000", "#ffffff"]
-
-    async def _capture_video_frames(self, page) -> List[str]:
-        frames = []
-        try:
-            player = await page.query_selector('.html5-video-player') or await page.query_selector('video')
-            if player:
-                for _ in range(2):
-                    await asyncio.sleep(1.5)
-                    f = await player.screenshot()
-                    frames.append(base64.b64encode(f).decode('utf-8'))
-        except: pass
-        return frames
+            return [f"#{r:02x}{g:02x}{b:02x}" for r, g, b in color_thief.get_palette(color_count=5)]
+        except: return ["#000000", "#ffffff"]
