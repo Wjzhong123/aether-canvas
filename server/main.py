@@ -158,6 +158,16 @@ async def websocket_endpoint(websocket: WebSocket):
                     with open("agent_identity.json", "w") as f: json.dump(new_identity, f)
                     orch.identity = new_identity
                     await websocket.send_json({"type": "status", "content": st["identity_synced"]})
+                
+                elif message.get("type") == "audio":
+                    audio_base64 = message.get("content")
+                    transcribed_text = await orch.transcribe(audio_base64, api_keys)
+                    if transcribed_text:
+                        await websocket.send_json({"type": "transcript", "content": transcribed_text})
+                        if len(transcribed_text) > 1:
+                            message["query"] = transcribed_text
+                            message["type"] = "research"
+                            active_research_tasks[client_id] = asyncio.create_task(run_research(message))
             except Exception as e:
                 logger.error(f"WS Loop Error: {e}")
                 await websocket.send_json({"type": "status", "content": f"CRITICAL_ERROR: {str(e)}"})

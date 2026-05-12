@@ -1,106 +1,121 @@
 import { useState, useEffect, useRef } from 'react';
 
-interface VoiceConfig {
-  threshold?: number;
-  silenceDelay?: number;
+interface UseRealtimeVoiceProps {
   onSpeechStart?: () => void;
-  onSpeechEnd?: (blob: Blob) => void;
-  onVolumeChange?: (volume: number) => void;
+  onSpeechEnd?: (base64Audio: string) => void;
 }
 
-export const useRealtimeVoice = (config: VoiceConfig) => {
+export const useRealtimeVoice = ({ onSpeechStart, onSpeechEnd }: UseRealtimeVoiceProps) => {
   const [isActive, setIsActive] = useState(false);
   const [isUserSpeaking, setIsUserSpeaking] = useState(false);
   const [volume, setVolume] = useState(0);
+  const [analyser, setAnalyser] = useState<AnalyserNode | null>(null);
   
-  const audioContext = useRef<AudioContext | null>(null);
-  const analyser = useRef<AnalyserNode | null>(null);
-  const stream = useRef<MediaStream | null>(null);
-  const mediaRecorder = useRef<MediaRecorder | null>(null);
-  const chunks = useRef<Blob[]>([]);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
   
-  const threshold = config.threshold || 0.04;
-  const silenceDelay = config.silenceDelay || 1200;
-  const lastSpeakTime = useRef<number>(0);
+  const vADThreshold = 0.005; // Lowered threshold for hyper-sensitivity
+  const silenceTimeout = 1200; // Faster response
+  const lastSpeakTime = useRef<number>(Date.now());
   const isSpeakingRef = useRef(false);
 
   const startLiveMode = async () => {
     try {
-      stream.current = await navigator.mediaDevices.getUserMedia({ audio: true });
-      audioContext.current = new AudioContext();
-      if (audioContext.current.state === 'suspended') {
-        await audioContext.current.resume();
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      streamRef.current = stream;
+      
+      audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+      if (audioContextRef.current.state === 'suspended') {
+        await audioContextRef.current.resume();
       }
       
-      const source = audioContext.current.createMediaStreamSource(stream.current);
-      analyser.current = audioContext.current.createAnalyser();
-      analyser.current.fftSize = 256;
-      source.connect(analyser.current);
+      console.log("Audio Engine Active:", audioContextRef.current.state);
 
-      mediaRecorder.current = new MediaRecorder(stream.current);
-      mediaRecorder.current.ondataavailable = (e) => {
-        if (e.data.size > 0) chunks.current.push(e.data);
+      const source = audioContextRef.current.createMediaStreamSource(stream);
+      
+      // ADDED: SIGNAL BOOST (5x Gain)
+      const gainNode = audioContextRef.current.createGain();
+      gainNode.gain.value = 5.0; 
+      
+      const node = audioContextRef.current.createAnalyser();
+      node.fftSize = 256;
+      
+      source.connect(gainNode);
+      gainNode.connect(node);
+      
+      setAnalyser(node);
+      
+      // UNIVERSAL COMPATIBILITY: Detect supported mimeType
+      const types = ['audio/webm', 'audio/mp4', 'audio/ogg', 'audio/wav'];
+      const supportedType = types.find(type => MediaRecorder.isTypeSupported(type)) || '';
+      
+      const mediaRecorder = new MediaRecorder(stream, supportedType ? { mimeType: supportedType } : {});
+      mediaRecorderRef.current = mediaRecorder;
+      
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) audioChunksRef.current.push(event.data);
       };
-      mediaRecorder.current.onstop = () => {
-        const blob = new Blob(chunks.current, { type: 'audio/webm' });
-        config.onSpeechEnd?.(blob);
-        chunks.current = [];
+      
+      mediaRecorder.onstop = async () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: supportedType || 'audio/wav' });
+        const reader = new FileReader();
+        reader.readAsDataURL(audioBlob);
+        reader.onloadend = () => {
+          const base64data = (reader.result as string).split(',')[1];
+          if (base64data) onSpeechEnd?.(base64data);
+          audioChunksRef.current = [];
+        };
       };
 
       setIsActive(true);
-      requestAnimationFrame(updateVolume);
+      requestAnimationFrame(monitorVolume);
     } catch (err) {
-      console.error("Live Mode Error:", err);
+      console.error("Failed to start Live Mode:", err);
     }
+  };
+
+  const monitorVolume = () => {
+    if (!analyser || !isActive) return;
+    const dataArray = new Uint8Array(analyser.frequencyBinCount);
+    analyser.getByteFrequencyData(dataArray);
+    const sum = dataArray.reduce((a, b) => a + b, 0);
+    const currentVolume = sum / dataArray.length / 255;
+    setVolume(currentVolume);
+
+    const now = Date.now();
+    if (currentVolume > vADThreshold) {
+      lastSpeakTime.current = now;
+      if (!isSpeakingRef.current) {
+        isSpeakingRef.current = true;
+        setIsUserSpeaking(true);
+        onSpeechStart?.();
+        if (mediaRecorderRef.current?.state === 'inactive') {
+            audioChunksRef.current = [];
+            mediaRecorderRef.current.start();
+        }
+      }
+    } else {
+      if (isSpeakingRef.current && now - lastSpeakTime.current > silenceTimeout) {
+        isSpeakingRef.current = false;
+        setIsUserSpeaking(false);
+        if (mediaRecorderRef.current?.state === 'recording') {
+            mediaRecorderRef.current.stop();
+        }
+      }
+    }
+
+    if (isActive) requestAnimationFrame(monitorVolume);
   };
 
   const stopLiveMode = () => {
     setIsActive(false);
     setIsUserSpeaking(false);
-    stream.current?.getTracks().forEach(t => t.stop());
-    audioContext.current?.close();
-    mediaRecorder.current?.stop();
+    streamRef.current?.getTracks().forEach(track => track.stop());
+    if (mediaRecorderRef.current?.state !== 'inactive') try { mediaRecorderRef.current?.stop(); } catch(e) {}
+    if (audioContextRef.current?.state !== 'closed') audioContextRef.current?.close();
   };
 
-  const updateVolume = () => {
-    if (!isActive || !analyser.current) return;
-    
-    const dataArray = new Uint8Array(analyser.current.frequencyBinCount);
-    analyser.current.getByteFrequencyData(dataArray);
-    
-    const sum = dataArray.reduce((a, b) => a + b, 0);
-    const vol = sum / dataArray.length / 255;
-    setVolume(vol);
-    config.onVolumeChange?.(vol);
-
-    const now = Date.now();
-    if (vol > threshold) {
-      if (!isSpeakingRef.current) {
-        isSpeakingRef.current = true;
-        setIsUserSpeaking(true);
-        
-        // INTERRUPTION: Stop any current AI speech
-        if ('speechSynthesis' in window) window.speechSynthesis.cancel();
-        
-        config.onSpeechStart?.();
-        if (mediaRecorder.current?.state === 'inactive') mediaRecorder.current?.start();
-      }
-      lastSpeakTime.current = now;
-    } else if (isSpeakingRef.current && now - lastSpeakTime.current > silenceDelay) {
-      isSpeakingRef.current = false;
-      setIsUserSpeaking(false);
-      if (mediaRecorder.current?.state === 'recording') mediaRecorder.current?.stop();
-    }
-
-    if (isActive) requestAnimationFrame(updateVolume);
-  };
-
-  return {
-    isActive,
-    isUserSpeaking,
-    volume,
-    analyser: analyser.current,
-    startLiveMode,
-    stopLiveMode
-  };
+  return { isActive, isUserSpeaking, volume, analyser, startLiveMode, stopLiveMode };
 };

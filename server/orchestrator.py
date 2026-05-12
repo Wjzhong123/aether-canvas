@@ -3,6 +3,8 @@ import os
 import json
 import logging
 import re
+import base64
+import tempfile
 from typing import List, Dict, Any, Optional
 from dotenv import load_dotenv
 from memory_engine import MemoryEngine
@@ -235,3 +237,29 @@ class Orchestrator:
         rule = response.choices[0].message.content
         self.memory.add(f"RULE: {rule}", user_id=user_id, metadata={"type": "preference"})
         return rule
+
+    async def transcribe(self, audio_base64: str, api_keys: Dict[str, Any]) -> str:
+        """Modern AI-powered transcription using Whisper."""
+        self._setup_keys(api_keys)
+        try:
+            audio_data = base64.b64decode(audio_base64)
+            with tempfile.NamedTemporaryFile(suffix=".webm", delete=False) as tmp:
+                tmp.write(audio_data)
+                tmp_path = tmp.name
+            
+            try:
+                # Use OpenAI's transcription API directly via LiteLLM or OpenAI client
+                # Standard LiteLLM transcription call
+                response = await litellm.atranscription(
+                    model="whisper-1",
+                    file=open(tmp_path, "rb"),
+                    api_key=os.environ.get("OPENAI_API_KEY")
+                )
+                text = response.get("text", "")
+                logger.info(f"Whisper Transcription: {text}")
+                return text
+            finally:
+                if os.path.exists(tmp_path): os.remove(tmp_path)
+        except Exception as e:
+            logger.error(f"Transcription Error: {e}")
+            return ""

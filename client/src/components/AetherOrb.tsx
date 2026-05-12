@@ -1,12 +1,11 @@
 import React, { useRef, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
-import { Float } from '@react-three/drei';
 
 const vertexShader = `
+  varying vec2 vUv;
   varying float vDistortion;
   varying vec3 vNormal;
-  varying vec3 vViewPosition;
   uniform float uTime;
   uniform float uIntensity;
 
@@ -18,8 +17,7 @@ const vertexShader = `
   vec3 fade(vec3 t) { return t*t*t*(t*(t*6.0-15.0)+10.0); }
 
   float pnoise(vec3 P, vec3 rep) {
-    vec3 Pi0 = mod(floor(P), rep);
-    vec3 Pi1 = mod(Pi0 + vec3(1.0), rep);
+    vec3 Pi0 = mod(floor(P), rep); vec3 Pi1 = mod(Pi0 + vec3(1.0), rep);
     Pi0 = mod289(Pi0); Pi1 = mod289(Pi1);
     vec3 Pf0 = fract(P); vec3 Pf1 = Pf0 - vec3(1.0);
     vec4 ix = vec4(Pi0.x, Pi1.x, Pi0.x, Pi1.x); vec4 iy = vec4(Pi0.yy, Pi1.yy);
@@ -51,95 +49,79 @@ const vertexShader = `
   }
 
   void main() {
+    vUv = uv;
     vNormal = normalize(normalMatrix * normal);
-    vDistortion = pnoise(normal + uTime * 0.5, vec3(10.0)) * uIntensity;
-    vec3 newPosition = position + (normal * vDistortion * 1.5);
-    vec4 mvPosition = modelViewMatrix * vec4(newPosition, 1.0);
-    vViewPosition = -mvPosition.xyz;
-    gl_Position = projectionMatrix * mvPosition;
+    // Biological Pulsing Logic
+    vDistortion = pnoise(normal + uTime * 0.4, vec3(10.0)) * (0.1 + uIntensity * 0.5);
+    vec3 newPosition = position + (normal * vDistortion);
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(newPosition, 1.0);
   }
 `;
 
 const fragmentShader = `
+  varying vec2 vUv;
   varying float vDistortion;
   varying vec3 vNormal;
-  varying vec3 vViewPosition;
-  uniform float uTime;
   uniform vec3 uColor;
+  uniform float uTime;
+  uniform float uIntensity;
 
   void main() {
-    // Fresnel Effect (Glass rim light)
-    vec3 normal = normalize(vNormal);
-    vec3 viewDir = normalize(vViewPosition);
-    float fresnel = pow(1.0 - dot(normal, viewDir), 3.0);
+    float fresnel = pow(1.0 - dot(vNormal, vec3(0.0, 0.0, 1.0)), 3.0);
+    vec3 color = mix(uColor * 0.5, uColor, vDistortion * 2.0 + 0.5);
+    color += fresnel * uColor * 0.8;
     
-    // Core glow based on distortion
-    float brightness = vDistortion * 2.0;
-    vec3 color = mix(uColor, vec3(1.0, 1.0, 1.0), fresnel);
-    color += brightness * 0.5;
-
-    // Organic transparency
-    float alpha = mix(0.1, 0.9, fresnel) + brightness * 0.2;
-    gl_FragColor = vec4(color, alpha);
+    // Core Glow
+    float glow = (1.0 - length(vUv - 0.5) * 2.0);
+    color += uColor * pow(glow, 4.0) * (0.2 + uIntensity);
+    
+    gl_FragColor = vec4(color, 0.9);
   }
 `;
 
-interface AetherOrbProps {
-  analyser?: AnalyserNode | null;
-  color?: string;
-  isListening?: boolean;
-}
-
-const AetherOrb: React.FC<AetherOrbProps> = ({ analyser, color = '0, 242, 255', isListening }) => {
-  const mesh = useRef<THREE.Mesh>(null);
-  const material = useRef<THREE.ShaderMaterial>(null);
+const AetherOrb = ({ analyser, color, isListening }: { analyser: AnalyserNode | null, color: string, isListening: boolean }) => {
+  const meshRef = useRef<THREE.Mesh>(null);
   
   const uniforms = useMemo(() => ({
     uTime: { value: 0 },
     uIntensity: { value: 0 },
-    uColor: { value: new THREE.Color() }
+    uColor: { value: new THREE.Color(color.startsWith('#') ? color : `rgb(${color})`) }
   }), []);
 
   useFrame((state) => {
-    let currentIntensity = 0;
+    if (!meshRef.current) return;
+    const { clock } = state;
+    const time = clock.getElapsedTime();
+    
+    let intensity = 0;
     if (analyser) {
       const dataArray = new Uint8Array(analyser.frequencyBinCount);
       analyser.getByteFrequencyData(dataArray);
-      const sum = dataArray.reduce((a, b) => a + b, 0);
-      currentIntensity = sum / dataArray.length / 255;
+      const avg = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
+      intensity = avg / 128.0;
     }
 
-    if (material.current) {
-      material.current.uniforms.uTime.value = state.clock.getElapsedTime();
-      
-      // Premium Reactivity: Smooth and bouncy
-      const targetIntensity = isListening ? 0.4 + currentIntensity * 2.5 : 0.15 + currentIntensity * 1.0;
-      material.current.uniforms.uIntensity.value += (targetIntensity - material.current.uniforms.uIntensity.value) * 0.15;
-      
-      const rgb = color.split(',').map(v => parseInt(v.trim()) / 255);
-      material.current.uniforms.uColor.value.setRGB(rgb[0], rgb[1], rgb[2]);
-    }
+    const material = meshRef.current.material as THREE.ShaderMaterial;
+    material.uniforms.uTime.value = time;
+    material.uniforms.uIntensity.value = THREE.MathUtils.lerp(material.uniforms.uIntensity.value, intensity, 0.1);
+    material.uniforms.uColor.value.set(color.startsWith('#') ? color : `rgb(${color})`);
     
-    if (mesh.current) {
-      mesh.current.rotation.y += 0.003;
-      mesh.current.rotation.z += 0.002;
-    }
+    // Subtle rotation
+    meshRef.current.rotation.y = time * 0.2;
+    meshRef.current.rotation.z = time * 0.1;
   });
 
   return (
-    <Float speed={2} rotationIntensity={0.5} floatIntensity={0.5}>
-      <mesh ref={mesh}>
-        <icosahedronGeometry args={[2, 128]} />
-        <shaderMaterial
-          ref={material}
-          vertexShader={vertexShader}
-          fragmentShader={fragmentShader}
-          uniforms={uniforms}
-          transparent
-          side={THREE.DoubleSide}
-        />
-      </mesh>
-    </Float>
+    <mesh ref={meshRef}>
+      <sphereGeometry args={[2, 64, 64]} />
+      <shaderMaterial 
+        vertexShader={vertexShader}
+        fragmentShader={fragmentShader}
+        uniforms={uniforms}
+        transparent={true}
+        side={THREE.DoubleSide}
+      />
+    </mesh>
   );
 };
 
