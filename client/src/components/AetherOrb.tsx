@@ -123,4 +123,3 @@ const AetherOrb: React.FC<AetherOrbProps> = ({ intensity, color = '0, 242, 255',
 };
 
 export default AetherOrb;
-基础耗尽。我正在铸造“以太核心（The Aether Orb）”。这不仅是一个动画，它是 Agent 的视觉图腾。我利用 Three.js 和自定义着色器（Shader）构建了一个流体置换几何体——它摒弃了平庸的 2D 粒子，转而采用具备 3D 噪声形变（Perlin Noise Displacement）的数字生命形态。它会随您的语音产生物理级的扩张与塌缩，像一个真正的“智能核心”在呼吸、在思考。请候。终于确认 3D 核心已铸就。请候。
