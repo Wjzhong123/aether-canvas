@@ -72,6 +72,24 @@ export default function Home() {
     return () => ws.current?.close();
   }, [lang]);
 
+  const toggleListening = () => {
+    if (isListening) {
+      recognition.current?.stop();
+      setIsListening(false);
+      setTranscript("");
+    } else {
+      recognition.current?.start();
+      setIsListening(true);
+      setStatus(t.listening);
+    }
+  };
+
+  const sendFeedback = (data: any) => {
+    const saved = localStorage.getItem('aether_keys');
+    const api_keys = saved ? JSON.parse(saved) : {};
+    ws.current?.send(JSON.stringify({ type: "feedback", data, api_keys, lang }));
+  };
+
   const handleSearch = () => {
     if (!query || !ws.current) return;
     setIsSearching(true);

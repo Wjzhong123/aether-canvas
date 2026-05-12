@@ -28,8 +28,14 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, currentL
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 md:p-8 bg-black/80 backdrop-blur-xl">
-      <div className="glass w-full max-w-xl overflow-hidden animate-in zoom-in-95 duration-300">
+    <div 
+      className="fixed inset-0 z-[200] flex items-center justify-center p-4 md:p-8 bg-black/80 backdrop-blur-xl transition-opacity duration-300"
+      onClick={onClose}
+    >
+      <div 
+        className="glass w-full max-w-xl overflow-hidden animate-in zoom-in-95 duration-300 relative"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="p-6 border-b border-white/10 flex justify-between items-center bg-accent/5">
           <div className="flex items-center gap-3">
             <Shield className="w-6 h-6 text-accent" />
