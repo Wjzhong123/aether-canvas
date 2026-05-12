@@ -8,9 +8,11 @@ interface IntentEngineProps {
   accentColor: string;
   isListening?: boolean;
   findingCount?: number;
+  isLiveMode?: boolean;
+  voiceVolume?: number;
 }
 
-const IntentEngine: React.FC<IntentEngineProps> = ({ stage, accentColor, isListening, findingCount }) => {
+const IntentEngine: React.FC<IntentEngineProps> = ({ stage, accentColor, isListening, findingCount, isLiveMode, voiceVolume }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const particles = useRef<any[]>([]);
   const bubbles = useRef<any[]>([]);
@@ -73,7 +75,14 @@ const IntentEngine: React.FC<IntentEngineProps> = ({ stage, accentColor, isListe
       }
 
       particles.current.forEach(p => {
-        if (isListening) {
+        if (isLiveMode && voiceVolume) {
+          // Live mode physics: pulsate and condense with volume
+          p.angle += 0.03 + (voiceVolume * 0.1);
+          p.dist = (isUserSpeaking ? 80 : 250) + (Math.sin(Date.now() * 0.005) * 50) - (voiceVolume * 150);
+          p.x = centerX + Math.cos(p.angle) * p.dist;
+          p.y = centerY + Math.sin(p.angle) * p.dist;
+          p.alpha = 0.3 + (voiceVolume * 0.7);
+        } else if (isListening) {
           // Vortex rotation when listening
           p.angle += 0.02;
           p.dist *= 0.99;

@@ -1,13 +1,16 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Settings, Mic, MicOff, Search, Globe, ShieldCheck, Target, Command, ExternalLink, Activity, Cpu, Zap, Layers } from 'lucide-react';
+import { Settings, Mic, MicOff, Search, Globe, ShieldCheck, Target, Command, ExternalLink, Activity, Cpu, Zap, Layers, Headphones } from 'lucide-react';
+import { useRealtimeVoice } from '../hooks/useRealtimeVoice';
 import { locales, LocaleType } from '../locales';
 import SettingsModal from '../components/SettingsModal';
 import EvidenceCard from '../components/EvidenceCard';
 import IntentEngine from '../components/IntentEngine';
 import VisualPulse from '../components/VisualPulse';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Canvas } from '@react-three/fiber';
+import AetherOrb from '../components/AetherOrb';
 import gsap from 'gsap';
 
 export default function Home() {
@@ -40,11 +43,38 @@ export default function Home() {
   useEffect(() => { isSearchingRef.current = isSearching; }, [isSearching]);
 
   const [accentColor, setAccentColor] = useState('0, 242, 255');
+  const [isLiveMode, setIsLiveMode] = useState(false);
+  
+  const { isActive: isVoiceActive, isUserSpeaking, volume: voiceVolume, startLiveMode, stopLiveMode } = useRealtimeVoice({
+    onSpeechStart: () => {
+      if (ws.current) ws.current.send(JSON.stringify({ type: "interrupt" }));
+      setIsSearching(false);
+      setTranscript("LISTENING...");
+    },
+    onSpeechEnd: (blob) => {
+      if (transcript && transcript !== "LISTENING...") {
+        handleSearch(transcript);
+      }
+    }
+  });
+
+  const toggleLiveMode = () => {
+    if (isLiveMode) {
+      stopLiveMode();
+      setIsLiveMode(false);
+    } else {
+      startLiveMode();
+      setIsLiveMode(true);
+    }
+  };
 
   const handleSearch = (overrideQuery?: string) => {
     const finalQuery = overrideQuery || queryRef.current;
-    if (!finalQuery || !ws.current || isSearchingRef.current) return;
+    if (!finalQuery || !ws.current) return;
     
+    // Auto-interrupt if research starts
+    if (isSearchingRef.current) ws.current.send(JSON.stringify({ type: "interrupt" }));
+
     setIsSearching(true);
     setThinkingStage('exploration');
     setEvidenceList([]);
@@ -55,7 +85,7 @@ export default function Home() {
     
     ws.current.send(JSON.stringify({ type: "research", query: finalQuery, api_keys, lang }));
     setQuery("");
-    setTranscript("");
+    if (!isLiveMode) setTranscript("");
   };
 
   useEffect(() => {
@@ -221,7 +251,14 @@ export default function Home() {
       {/* Swiss Grid Overlay */}
       <div className="fixed inset-0 pointer-events-none z-10 opacity-[0.03] bg-[radial-gradient(#fff_1px,transparent_1px)] [background-size:20px_20px]" />
       
-      <IntentEngine stage={thinkingStage} accentColor={accentColor} isListening={isListening} findingCount={evidenceList.length} />
+      <IntentEngine 
+        stage={thinkingStage} 
+        accentColor={accentColor} 
+        isListening={isListening || isUserSpeaking} 
+        findingCount={evidenceList.length}
+        isLiveMode={isLiveMode}
+        voiceVolume={voiceVolume}
+      />
       <VisualPulse active={isSearching} />
       <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} currentLang={lang} setLang={setLang} />
       
@@ -230,6 +267,20 @@ export default function Home() {
           <motion.div initial={{ x: -20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} className="flex flex-col gap-1">
              <div className="label-mono text-[9px] md:text-[10px] text-accent tracking-[0.3em] uppercase mb-2">{t.subtitle}</div>
              <h1 className="font-bauhaus text-4xl md:text-7xl leading-none tracking-tighter text-white uppercase">{agentIdentity.name}</h1>
+             
+             {/* Aether Orb: The Intelligence Core */}
+             <div className="h-24 md:h-32 w-full mt-4 -ml-4 md:-ml-8 opacity-80 mix-blend-screen pointer-events-none">
+                <Canvas camera={{ position: [0, 0, 5], fov: 45 }}>
+                   <ambientLight intensity={1.5} />
+                   <pointLight position={[10, 10, 10]} intensity={2} />
+                   <AetherOrb 
+                     intensity={voiceVolume || 0} 
+                     color={accentColor} 
+                     isListening={isUserSpeaking || isListening} 
+                   />
+                </Canvas>
+             </div>
+
              <div className="flex items-center gap-3 md:gap-4 mt-2 md:mt-4">
                 <div className="h-[2px] w-8 md:w-12 bg-accent" />
                 <div className="label-mono text-[10px] md:text-[12px] text-white/40 tracking-widest uppercase">{agentIdentity.role}</div>
@@ -435,6 +486,13 @@ export default function Home() {
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
             />
+            <button 
+              onClick={toggleLiveMode} 
+              className={`w-16 h-16 rounded-2xl flex items-center justify-center transition-all duration-500 ${isLiveMode ? 'bg-accent text-black sci-fi-glow' : 'bg-white/5 text-white/30 hover:text-white/50'}`}
+              title="Aether Live (Full-Duplex)"
+            >
+              <Headphones className={`w-6 h-6 ${isLiveMode ? 'animate-pulse' : ''}`} />
+            </button>
             <button onClick={() => handleSearch()} className={`w-16 h-16 rounded-2xl flex items-center justify-center transition-all duration-500 ${query ? 'bg-accent text-black sci-fi-glow' : 'bg-white/5 text-white/10'}`}>
               <Search className="w-6 h-6" />
             </button>
