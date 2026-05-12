@@ -3,8 +3,16 @@
 import React, { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import VisualPulse from '@/components/VisualPulse';
 import EvidenceCard from '@/components/EvidenceCard';
-import { Command, ShieldCheck, Target, Trash2, Zap } from 'lucide-react';
+import { Command, ShieldCheck, Target, Mic, MicOff, Volume2 } from 'lucide-react';
 import gsap from 'gsap';
+
+// Types for Web Speech API
+declare global {
+  interface Window {
+    SpeechRecognition: any;
+    webkitSpeechRecognition: any;
+  }
+}
 
 export default function Home() {
   const [query, setQuery] = useState("");
@@ -14,12 +22,63 @@ export default function Home() {
   const [status, setStatus] = useState("SYSTEM READY");
   const [activeCitation, setActiveCitation] = useState<any>(null);
   const [commandHint, setCommandHint] = useState<string | null>(null);
-  const ws = useRef<WebSocket | null>(null);
   
+  // Voice State
+  const [isListening, setIsListening] = useState(false);
+  const [transcript, setTranscript] = useState("");
+  const recognition = useRef<any>(null);
+
+  const ws = useRef<WebSocket | null>(null);
   const citationRefs = useRef<{ [key: string]: HTMLButtonElement | null }>({});
   const cardRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
   const svgRef = useRef<SVGSVGElement | null>(null);
   const pathRef = useRef<SVGPathElement | null>(null);
+
+  // Initialize Speech Recognition
+  useEffect(() => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (SpeechRecognition) {
+      recognition.current = new SpeechRecognition();
+      recognition.current.continuous = true;
+      recognition.current.interimResults = true;
+      recognition.current.lang = 'zh-CN';
+
+      recognition.current.onresult = (event: any) => {
+        let interimTranscript = '';
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+          if (event.results[i].isFinal) {
+            const final = event.results[i][0].transcript;
+            setQuery(prev => prev + final);
+            setTranscript("");
+          } else {
+            interimTranscript += event.results[i][0].transcript;
+          }
+        }
+        setTranscript(interimTranscript);
+      };
+
+      recognition.current.onerror = (event: any) => {
+        console.error("Speech Recognition Error", event.error);
+        setIsListening(false);
+      };
+
+      recognition.current.onend = () => {
+        if (isListening) recognition.current.start();
+      };
+    }
+  }, [isListening]);
+
+  const toggleListening = () => {
+    if (isListening) {
+      recognition.current?.stop();
+      setIsListening(false);
+      setTranscript("");
+    } else {
+      recognition.current?.start();
+      setIsListening(true);
+      setStatus("LISTENING...");
+    }
+  };
 
   useEffect(() => {
     const connect = () => {
@@ -30,7 +89,7 @@ export default function Home() {
         if (data.type === 'status') setStatus(data.content.toUpperCase());
         else if (data.type === 'evidence') setEvidenceList((prev) => [data.content, ...prev]);
         else if (data.type === 'summary') { setSummaryData(data.content); setIsSearching(false); }
-        else if (data.type === 'clear') { setEvidenceList([]); setSummaryData(null); setStatus("CANVAS CLEARED"); setIsSearching(false); }
+        else if (data.type === 'clear') { setEvidenceList([]); setSummaryData(null); setStatus("CANVAS CLEARED"); }
       };
       socket.onclose = () => { setStatus("SYSTEM OFFLINE..."); setTimeout(connect, 3000); };
     };
@@ -39,10 +98,10 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    if (query.startsWith("/v ")) setCommandHint("VIDEO MODE: Focusing on visual motion & YouTube");
-    else if (query.startsWith("/p ")) setCommandHint("PALETTE MODE: Focusing on UI/UX & Style");
+    if (query.startsWith("/v ")) setCommandHint("VIDEO MODE: Focusing on motion & YouTube");
+    else if (query.startsWith("/p ")) setCommandHint("PALETTE MODE: Focusing on UI/Design");
     else if (query.startsWith("/m ")) setCommandHint("MEMORY MODE: Direct brain retrieval");
-    else if (query.startsWith("/clear")) setCommandHint("CLEAR: Wipe the current canvas");
+    else if (query.startsWith("/clear")) setCommandHint("CLEAR: Wipe canvas");
     else setCommandHint(null);
   }, [query]);
 
@@ -76,6 +135,20 @@ export default function Home() {
   return (
     <main className="min-h-screen relative swiss-grid selection:bg-accent selection:text-black overflow-x-hidden">
       <VisualPulse active={isSearching} />
+      
+      {/* Voice Subtitles Overlay */}
+      {isListening && (
+        <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[100] w-full max-w-4xl px-8 pointer-events-none">
+          <div className="flex flex-col items-center">
+             <div className="w-1 h-12 bg-accent animate-bounce mb-8" />
+             <p className="text-bauhaus text-6xl text-center tracking-tighter text-white opacity-90 drop-shadow-2xl italic">
+               {transcript || "LISTENING..."}
+             </p>
+             <p className="font-mono text-xs text-accent mt-4 tracking-[0.5em] uppercase animate-pulse">Streaming_Voice_Data</p>
+          </div>
+        </div>
+      )}
+
       <svg ref={svgRef} className="fixed inset-0 pointer-events-none z-40 w-full h-full">
         <path ref={pathRef} fill="none" stroke="var(--color-accent)" strokeWidth="1.5" strokeDasharray="5,5" className="drop-shadow-[0_0_8px_rgba(255,62,0,0.8)]" />
       </svg>
@@ -86,7 +159,11 @@ export default function Home() {
           <div className="h-1 w-12 bg-accent" />
         </div>
         <div className="text-right font-mono pointer-events-auto">
-          <div className="flex items-center justify-end gap-2 text-xs text-white/50 tracking-widest uppercase">
+          <div className="flex items-center justify-end gap-4 text-xs text-white/50 tracking-widest uppercase">
+            <button onClick={toggleListening} className={`flex items-center gap-2 px-3 py-1 border transition-all ${isListening ? 'border-accent text-accent animate-pulse' : 'border-white/10 hover:border-white/40'}`}>
+               {isListening ? <Mic className="w-3 h-3" /> : <MicOff className="w-3 h-3" />}
+               {isListening ? 'VOICE ON' : 'VOICE OFF'}
+            </button>
             <div className={`w-2 h-2 rounded-full ${ws.current?.readyState === WebSocket.OPEN ? 'bg-green-500' : 'bg-red-500'}`} />
             {status}
           </div>
@@ -126,17 +203,12 @@ export default function Home() {
 
       <footer className="fixed bottom-0 left-0 w-full p-12 z-50 pointer-events-none">
         <div className="max-w-3xl mx-auto pointer-events-auto">
-          {commandHint && (
-            <div className="mb-2 bg-accent text-black font-mono text-[10px] px-3 py-1 flex items-center gap-2 animate-in slide-in-from-bottom-2 duration-300">
-               <Zap className="w-3 h-3" fill="currentColor" /> {commandHint}
-            </div>
-          )}
-          <div className="glass rounded-none border-l-4 border-accent p-1 flex items-center gap-2 shadow-2xl bg-black/95 group transition-all duration-300 focus-within:ring-1 ring-accent/50">
+          <div className="glass rounded-none border-l-4 border-accent p-1 flex items-center gap-2 shadow-2xl bg-black/95 group transition-all duration-300">
             <div className="pl-4"><Command className="w-5 h-5 text-accent" /></div>
             <input 
               type="text" 
-              placeholder="ENTER RESEARCH INTENT OR COMMAND..."
-              className="flex-1 bg-transparent border-none outline-none font-mono text-sm py-5 px-2 tracking-[0.2em] uppercase"
+              placeholder={isListening ? "RECORDING SPEECH..." : "INPUT RESEARCH INTENT..."}
+              className={`flex-1 bg-transparent border-none outline-none font-mono text-sm py-5 px-2 tracking-[0.2em] uppercase transition-all ${isListening ? 'text-accent' : ''}`}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
