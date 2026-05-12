@@ -38,35 +38,42 @@ async def websocket_endpoint(websocket: WebSocket):
             message = json.loads(data)
             
             if message.get("type") == "research":
-                query = message.get("query")
-                await websocket.send_json({"type": "status", "content": "DECOMPOSING INTENT..."})
+                raw_query = message.get("query")
                 
-                # 1. Orchestrator plans tasks
-                tasks = await orch.decompose_intent(query)
+                # 1. Parse Atomic Commands
+                cmd_data = await orch.parse_command(raw_query)
+                command = cmd_data["command"]
+                query = cmd_data["query"]
+
+                if command == "clear":
+                    await websocket.send_json({"type": "clear"})
+                    continue
+
+                await websocket.send_json({"type": "status", "content": f"CMD: {command.upper()} | PLANNING..."})
                 
+                # 2. Planning
+                tasks = await orch.decompose_intent(cmd_data)
+                
+                if command == "memory":
+                    # Special handling for memory retrieval
+                    for task in tasks:
+                        await websocket.send_json({"type": "status", "content": f"MEMORY: {task}"})
+                    await websocket.send_json({"type": "summary", "content": {"summary": "\n".join(tasks), "citations": []}})
+                    continue
+
                 collected_evidence = []
                 for task in tasks:
-                    # If task is not a URL, make it a search URL
                     url = task if task.startswith("http") else f"https://www.bing.com/search?q={task}"
-                    
-                    await websocket.send_json({"type": "status", "content": f"FETCHING EVIDENCE: {task}"})
-                    
-                    # 2. NexusBrowser gets visual evidence
+                    await websocket.send_json({"type": "status", "content": f"FETCHING: {task}"})
                     evidence = await nexus.get_visual_evidence(url)
                     collected_evidence.append(evidence)
-                    
                     await websocket.send_json({"type": "evidence", "content": evidence})
                 
-                # 3. Final Summary (Premium)
-                await websocket.send_json({"type": "status", "content": "AUDITING & SUMMARIZING..."})
+                # 3. Auditing
+                await websocket.send_json({"type": "status", "content": "AUDITING..."})
                 summary = await orch.audit_and_summarize(query, collected_evidence)
-                
-                await websocket.send_json({
-                    "type": "summary",
-                    "content": summary
-                })
-                
-                await websocket.send_json({"type": "status", "content": "RESEARCH COMPLETE."})
+                await websocket.send_json({"type": "summary", "content": summary})
+                await websocket.send_json({"type": "status", "content": "COMPLETE."})
                 
     except WebSocketDisconnect: pass
     except Exception as e: logger.error(f"WS Error: {e}")

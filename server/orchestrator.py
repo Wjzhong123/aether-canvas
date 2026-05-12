@@ -2,7 +2,7 @@ import litellm
 import os
 import json
 import logging
-from typing import List, Dict
+from typing import List, Dict, Any
 from dotenv import load_dotenv
 from memory_engine import MemoryEngine
 
@@ -16,34 +16,64 @@ class Orchestrator:
         self.premium_model = os.getenv("PREMIUM_MODEL", "gpt-4o")
         self.memory = MemoryEngine()
 
-    async def decompose_intent(self, query: str, user_id: str = "default_user") -> List[str]:
+    async def parse_command(self, query: str) -> Dict[str, Any]:
+        """Detect /commands in the query."""
+        cmd = "search"
+        clean_query = query
+        
+        if query.startswith("/v "):
+            cmd = "video"
+            clean_query = query[3:]
+        elif query.startswith("/p "):
+            cmd = "palette"
+            clean_query = query[3:]
+        elif query.startswith("/m "):
+            cmd = "memory"
+            clean_query = query[3:]
+        elif query.startswith("/clear"):
+            cmd = "clear"
+            clean_query = ""
+            
+        return {"command": cmd, "query": clean_query}
+
+    async def decompose_intent(self, query_data: Dict, user_id: str = "default_user") -> List[str]:
+        cmd = query_data["command"]
+        query = query_data["query"]
+        
+        if cmd == "memory":
+            mems = self.memory.search(query, user_id=user_id)
+            return [f"MEMORY_RETRIEVAL: {m['text']}" for m in mems]
+        
         mems = self.memory.search(query, user_id=user_id)
         context = "\n".join([m['text'] for m in mems]) if mems else ""
         
+        system_prompt = f"Decompose research intent. Context: {context}. "
+        if cmd == "video":
+            system_prompt += "Focus specifically on finding video sources and YouTube links."
+        elif cmd == "palette":
+            system_prompt += "Focus on visual design, UI, and color palettes."
+            
         response = await litellm.acompletion(
             model=self.cheap_model,
             messages=[
-                {"role": "system", "content": f"Decompose research intent. Previous Context: {context}. Return JSON list in 'queries' key."},
+                {"role": "system", "content": f"{system_prompt} Return JSON list in 'queries' key."},
                 {"role": "user", "content": query}
             ],
             response_format={"type": "json_object"}
         )
-        data = json.loads(response.choices[0].message.content)
-        return data.get("queries", [query])
+        return json.loads(response.choices[0].message.content).get("queries", [query])
 
     async def audit_and_summarize(self, query: str, evidences: List[Dict], user_id: str = "default_user") -> Dict:
-        logger.info(f"Auditing and summarizing {len(evidences)} evidences")
+        # Standard premium synthesis
         context = "\n".join([f"Source: {e['url']}\nContent: {e.get('text', '')[:1000]}" for e in evidences])
-        
         response = await litellm.acompletion(
             model=self.premium_model,
             messages=[
-                {"role": "system", "content": "Asymmetric Auditing Agent. Provide a summary with 'citations'. Each citation must have 'point', 'url', and 'locator_text' (exact text from source). Return JSON object {summary: str, citations: list}."},
+                {"role": "system", "content": "Asymmetric Auditing Agent. Synthesize summary with pixel-level citations {summary, citations}."},
                 {"role": "user", "content": f"Query: {query}\nEvidence: {context}"}
             ],
             response_format={"type": "json_object"}
         )
-        
         result = json.loads(response.choices[0].message.content)
-        self.memory.add(f"Audit Result for {query}: {result.get('summary', '')[:200]}", user_id=user_id)
+        self.memory.add(f"Insight: {result.get('summary', '')[:200]}", user_id=user_id)
         return result
