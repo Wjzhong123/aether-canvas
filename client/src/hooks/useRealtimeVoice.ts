@@ -19,8 +19,8 @@ export const useRealtimeVoice = (config: VoiceConfig) => {
   const mediaRecorder = useRef<MediaRecorder | null>(null);
   const chunks = useRef<Blob[]>([]);
   
-  const threshold = config.threshold || 0.05;
-  const silenceDelay = config.silenceDelay || 1500;
+  const threshold = config.threshold || 0.04;
+  const silenceDelay = config.silenceDelay || 1200;
   const lastSpeakTime = useRef<number>(0);
   const isSpeakingRef = useRef(false);
 
@@ -28,6 +28,10 @@ export const useRealtimeVoice = (config: VoiceConfig) => {
     try {
       stream.current = await navigator.mediaDevices.getUserMedia({ audio: true });
       audioContext.current = new AudioContext();
+      if (audioContext.current.state === 'suspended') {
+        await audioContext.current.resume();
+      }
+      
       const source = audioContext.current.createMediaStreamSource(stream.current);
       analyser.current = audioContext.current.createAnalyser();
       analyser.current.fftSize = 256;
@@ -74,14 +78,18 @@ export const useRealtimeVoice = (config: VoiceConfig) => {
       if (!isSpeakingRef.current) {
         isSpeakingRef.current = true;
         setIsUserSpeaking(true);
+        
+        // INTERRUPTION: Stop any current AI speech
+        if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+        
         config.onSpeechStart?.();
-        mediaRecorder.current?.start();
+        if (mediaRecorder.current?.state === 'inactive') mediaRecorder.current?.start();
       }
       lastSpeakTime.current = now;
     } else if (isSpeakingRef.current && now - lastSpeakTime.current > silenceDelay) {
       isSpeakingRef.current = false;
       setIsUserSpeaking(false);
-      mediaRecorder.current?.stop();
+      if (mediaRecorder.current?.state === 'recording') mediaRecorder.current?.stop();
     }
 
     if (isActive) requestAnimationFrame(updateVolume);
@@ -91,6 +99,7 @@ export const useRealtimeVoice = (config: VoiceConfig) => {
     isActive,
     isUserSpeaking,
     volume,
+    analyser: analyser.current,
     startLiveMode,
     stopLiveMode
   };

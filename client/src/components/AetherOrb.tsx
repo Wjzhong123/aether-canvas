@@ -1,15 +1,16 @@
 import React, { useRef, useMemo } from 'react';
-import { useFrame, extend, ThreeElement } from '@react-three/fiber';
+import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
-import { MeshDistortMaterial } from '@react-three/drei';
+import { Float } from '@react-three/drei';
 
 const vertexShader = `
   varying float vDistortion;
-  varying vec2 vUv;
+  varying vec3 vNormal;
+  varying vec3 vViewPosition;
   uniform float uTime;
   uniform float uIntensity;
 
-  // GLSL Noise function
+  // Classic Perlin Noise
   vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
   vec4 mod289(vec4 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
   vec4 permute(vec4 x) { return mod289(((x*34.0)+1.0)*x); }
@@ -50,36 +51,46 @@ const vertexShader = `
   }
 
   void main() {
-    vUv = uv;
+    vNormal = normalize(normalMatrix * normal);
     vDistortion = pnoise(normal + uTime * 0.5, vec3(10.0)) * uIntensity;
-    vec3 newPosition = position + (normal * vDistortion * 2.0);
-    gl_Position = projectionMatrix * modelViewMatrix * vec4(newPosition, 1.0);
+    vec3 newPosition = position + (normal * vDistortion * 1.5);
+    vec4 mvPosition = modelViewMatrix * vec4(newPosition, 1.0);
+    vViewPosition = -mvPosition.xyz;
+    gl_Position = projectionMatrix * mvPosition;
   }
 `;
 
 const fragmentShader = `
   varying float vDistortion;
-  varying vec2 vUv;
+  varying vec3 vNormal;
+  varying vec3 vViewPosition;
   uniform float uTime;
   uniform vec3 uColor;
 
   void main() {
-    float brightness = vDistortion * 2.5;
-    vec3 color = uColor + brightness;
+    // Fresnel Effect (Glass rim light)
+    vec3 normal = normalize(vNormal);
+    vec3 viewDir = normalize(vViewPosition);
+    float fresnel = pow(1.0 - dot(normal, viewDir), 3.0);
     
-    // Swiss minimal glow
-    float alpha = 0.8 + vDistortion * 2.0;
+    // Core glow based on distortion
+    float brightness = vDistortion * 2.0;
+    vec3 color = mix(uColor, vec3(1.0, 1.0, 1.0), fresnel);
+    color += brightness * 0.5;
+
+    // Organic transparency
+    float alpha = mix(0.1, 0.9, fresnel) + brightness * 0.2;
     gl_FragColor = vec4(color, alpha);
   }
 `;
 
 interface AetherOrbProps {
-  intensity: number;
+  analyser?: AnalyserNode | null;
   color?: string;
   isListening?: boolean;
 }
 
-const AetherOrb: React.FC<AetherOrbProps> = ({ intensity, color = '0, 242, 255', isListening }) => {
+const AetherOrb: React.FC<AetherOrbProps> = ({ analyser, color = '0, 242, 255', isListening }) => {
   const mesh = useRef<THREE.Mesh>(null);
   const material = useRef<THREE.ShaderMaterial>(null);
   
@@ -90,35 +101,45 @@ const AetherOrb: React.FC<AetherOrbProps> = ({ intensity, color = '0, 242, 255',
   }), []);
 
   useFrame((state) => {
+    let currentIntensity = 0;
+    if (analyser) {
+      const dataArray = new Uint8Array(analyser.frequencyBinCount);
+      analyser.getByteFrequencyData(dataArray);
+      const sum = dataArray.reduce((a, b) => a + b, 0);
+      currentIntensity = sum / dataArray.length / 255;
+    }
+
     if (material.current) {
       material.current.uniforms.uTime.value = state.clock.getElapsedTime();
       
-      // Target intensity with smooth interpolation
-      const targetIntensity = isListening ? 0.3 + intensity * 1.2 : 0.1 + intensity * 0.5;
-      material.current.uniforms.uIntensity.value += (targetIntensity - material.current.uniforms.uIntensity.value) * 0.1;
+      // Premium Reactivity: Smooth and bouncy
+      const targetIntensity = isListening ? 0.4 + currentIntensity * 2.5 : 0.15 + currentIntensity * 1.0;
+      material.current.uniforms.uIntensity.value += (targetIntensity - material.current.uniforms.uIntensity.value) * 0.15;
       
       const rgb = color.split(',').map(v => parseInt(v.trim()) / 255);
       material.current.uniforms.uColor.value.setRGB(rgb[0], rgb[1], rgb[2]);
     }
     
     if (mesh.current) {
-      mesh.current.rotation.y += 0.005;
-      mesh.current.rotation.z += 0.003;
+      mesh.current.rotation.y += 0.003;
+      mesh.current.rotation.z += 0.002;
     }
   });
 
   return (
-    <mesh ref={mesh}>
-      <icosahedronGeometry args={[2, 64]} />
-      <shaderMaterial
-        ref={material}
-        vertexShader={vertexShader}
-        fragmentShader={fragmentShader}
-        uniforms={uniforms}
-        transparent
-        side={THREE.DoubleSide}
-      />
-    </mesh>
+    <Float speed={2} rotationIntensity={0.5} floatIntensity={0.5}>
+      <mesh ref={mesh}>
+        <icosahedronGeometry args={[2, 128]} />
+        <shaderMaterial
+          ref={material}
+          vertexShader={vertexShader}
+          fragmentShader={fragmentShader}
+          uniforms={uniforms}
+          transparent
+          side={THREE.DoubleSide}
+        />
+      </mesh>
+    </Float>
   );
 };
 

@@ -45,7 +45,7 @@ export default function Home() {
   const [accentColor, setAccentColor] = useState('0, 242, 255');
   const [isLiveMode, setIsLiveMode] = useState(false);
   
-  const { isActive: isVoiceActive, isUserSpeaking, volume: voiceVolume, startLiveMode, stopLiveMode } = useRealtimeVoice({
+  const { isActive: isVoiceActive, isUserSpeaking, volume: voiceVolume, analyser: voiceAnalyser, startLiveMode, stopLiveMode } = useRealtimeVoice({
     onSpeechStart: () => {
       if (ws.current) ws.current.send(JSON.stringify({ type: "interrupt" }));
       setIsSearching(false);
@@ -269,12 +269,12 @@ export default function Home() {
              <h1 className="font-bauhaus text-4xl md:text-7xl leading-none tracking-tighter text-white uppercase">{agentIdentity.name}</h1>
              
              {/* Aether Orb: The Intelligence Core */}
-             <div className="h-24 md:h-32 w-full mt-4 -ml-4 md:-ml-8 opacity-80 mix-blend-screen pointer-events-none">
+             <div className="h-40 md:h-48 w-full mt-4 -ml-4 md:-ml-8 opacity-80 mix-blend-screen pointer-events-none">
                 <Canvas camera={{ position: [0, 0, 5], fov: 45 }}>
                    <ambientLight intensity={1.5} />
                    <pointLight position={[10, 10, 10]} intensity={2} />
                    <AetherOrb 
-                     intensity={voiceVolume || 0} 
+                     analyser={voiceAnalyser} 
                      color={accentColor} 
                      isListening={isUserSpeaking || isListening} 
                    />
